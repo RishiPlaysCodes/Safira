@@ -1,0 +1,55 @@
+{% extends 'base.html' %}
+{% block title %}Login — SafeRide Guardian{% endblock %}
+
+{% block content %}
+<style>
+    .auth-wrap {
+        max-width: 420px;
+        margin: 60px auto;
+    }
+    .auth-logo {
+        font-family: 'Rajdhani', sans-serif;
+        font-size: 13px;
+        letter-spacing: 3px;
+        text-transform: uppercase;
+        color: var(--accent);
+        margin-bottom: 8px;
+    }
+    .auth-title {
+        font-family: 'Rajdhani', sans-serif;
+        font-size: 38px;
+        font-weight: 700;
+        margin-bottom: 8px;
+    }
+    .auth-sub {
+        color: var(--text-muted);
+        font-size: 14px;
+        margin-bottom: 32px;
+    }
+    .auth-sub a { color: var(--accent); text-decoration: none; }
+</style>
+
+<div class="auth-wrap">
+    <p class="auth-logo">SafeRide Guardian</p>
+    <h1 class="auth-title">Welcome Back</h1>
+    <p class="auth-sub">New here? <a href="/signup/">Create an account</a></p>
+
+    <div class="card">
+        <form method="POST">
+            {% csrf_token %}
+            {% for field in form %}
+            <div class="form-group">
+                <label>{{ field.label }}</label>
+                {{ field }}
+                {% if field.errors %}
+                    <p style="color: var(--danger); font-size: 12px; margin-top: 6px;">{{ field.errors.0 }}</p>
+                {% endif %}
+            </div>
+            {% endfor %}
+            <button type="submit" class="btn btn-primary" style="width:100%; justify-content:center; padding:14px;">
+                Login →
+            </button>
+        </form>
+    </div>
+</div>
+{% endblock %}

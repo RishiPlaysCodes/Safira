@@ -1,0 +1,126 @@
+{% extends 'base.html' %}
+{% block title %}Dashboard — SafeRide Guardian{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">Guardian Dashboard</h1>
+    <p class="page-subtitle">Welcome back, {{ request.user.username }}. This is your road-safety command center.</p>
+</div>
+
+<div class="stat-grid">
+    <div class="stat-box"><div class="stat-value">{{ total_trips }}</div><div class="stat-label">Trips</div></div>
+    <div class="stat-box"><div class="stat-value" style="color:var(--warning)">{{ overspeed_alerts }}</div><div class="stat-label">Overspeed</div></div>
+    <div class="stat-box"><div class="stat-value" style="color:var(--danger)">{{ red_light_violations }}</div><div class="stat-label">Red Light</div></div>
+    <div class="stat-box"><div class="stat-value" style="color:var(--danger)">{{ helmet_violations }}</div><div class="stat-label">Helmet Issues</div></div>
+    <div class="stat-box"><div class="stat-value" style="color:{% if safety_score >= 70 %}var(--success){% elif safety_score >= 50 %}var(--warning){% else %}var(--danger){% endif %}">{{ safety_score }}</div><div class="stat-label">Safety Score</div></div>
+</div>
+
+<div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap:20px;">
+    <div class="card">
+        <div class="card-title">Driver Profile</div>
+        <div class="info-row"><span class="info-key">Username</span><span class="info-val">{{ request.user.username }}</span></div>
+        <div class="info-row"><span class="info-key">Role</span><span class="info-val">{{ profile.role|title }}</span></div>
+        <div class="info-row"><span class="info-key">Phone</span><span class="info-val">{{ profile.phone_number|default:'—' }}</span></div>
+        <div class="info-row"><span class="info-key">Vehicle</span><span class="info-val">{{ profile.vehicle_type|title }}</span></div>
+        <div class="info-row"><span class="info-key">Average Risk</span><span class="info-val">{{ avg_risk }}/100</span></div>
+        <div style="margin-top:18px;">
+            <div class="score-bar-wrap"><div class="score-bar" style="width:{{ safety_score }}%; background:{% if safety_score >= 70 %}var(--success){% elif safety_score >= 50 %}var(--warning){% else %}var(--danger){% endif %};"></div></div>
+            <div style="margin-top:14px;">
+                {% if safety_score >= 90 %}<span class="badge badge-safe">Safe Driver</span>
+                {% elif safety_score >= 70 %}<span class="badge badge-good">Responsible Driver</span>
+                {% elif safety_score >= 50 %}<span class="badge badge-warn">Needs Improvement</span>
+                {% else %}<span class="badge badge-risky">Risky Driver</span>{% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-title">Emergency Guardian</div>
+        {% if contact %}
+            <div class="info-row"><span class="info-key">Name</span><span class="info-val">{{ contact.contact_name }}</span></div>
+            <div class="info-row"><span class="info-key">Phone</span><span class="info-val">{{ contact.contact_phone }}</span></div>
+            <div class="info-row"><span class="info-key">Relation</span><span class="info-val">{{ contact.relationship|default:'—' }}</span></div>
+        {% else %}
+            <div class="alert-banner error">No emergency contact added. Add one before demo/testing.</div>
+        {% endif %}
+        <div style="margin-top:18px; display:flex; gap:10px; flex-wrap:wrap;">
+            <a href="/alerts/contact/" class="btn btn-secondary">Add/Edit Contact</a>
+            <a href="/alerts/manual-sos/" class="btn btn-danger">Manual SOS</a>
+        </div>
+    </div>
+</div>
+
+<div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap:20px;">
+    <div class="card">
+        <div class="card-title">This Week</div>
+        <div class="info-row"><span class="info-key">Trips</span><span class="info-val">{{ weekly_total }}</span></div>
+        <div class="info-row"><span class="info-key">Average Risk</span><span class="info-val">{{ weekly_avg_risk }}/100</span></div>
+        <div class="info-row"><span class="info-key">Overspeed Events</span><span class="info-val">{{ weekly_overspeed }}</span></div>
+        <div class="info-row"><span class="info-key">Red-Light Events</span><span class="info-val">{{ weekly_red_light }}</span></div>
+        <div class="info-row"><span class="info-key">Helmet Issues</span><span class="info-val">{{ weekly_helmet }}</span></div>
+        <div class="info-row"><span class="info-key">Zone Visits</span><span class="info-val">{{ zone_visits }}</span></div>
+        <div style="margin-top:18px; display:flex; gap:10px; flex-wrap:wrap;">
+            <a href="/trips/weekly-report/" class="btn btn-secondary">Open Weekly Report</a>
+            <a href="/trips/weekly-report/send/" class="btn btn-primary">Send to Guardian</a>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-title">Top Risk Tags</div>
+        {% if weekly_top_tags %}
+            {% for tag, count in weekly_top_tags %}
+                <div class="info-row"><span class="info-key">{{ tag|title }}</span><span class="info-val">{{ count }}</span></div>
+            {% endfor %}
+        {% else %}
+            <p style="color:var(--text-muted);">No risky tags recorded this week.</p>
+        {% endif %}
+        <div style="margin-top:18px;">
+            {% if latest_zone_trip %}
+                <div class="alert-banner">Latest zone visit: {{ latest_zone_trip.road_type|title }} zone at {{ latest_zone_trip.created_at|date:'d M, H:i' }}</div>
+            {% else %}
+                <div class="alert-banner">No special-zone visits recorded this week.</div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap:20px;">
+    <div class="card">
+        <div class="card-title">Latest Emergency Status</div>
+        {% if latest_alert %}
+            <div class="info-row"><span class="info-key">Severity</span><span class="info-val">{{ latest_alert.severity|title }}</span></div>
+            <div class="info-row"><span class="info-key">Source</span><span class="info-val">{{ latest_alert.source|title }}</span></div>
+            <div class="info-row"><span class="info-key">Alert Sent</span><span class="info-val">{{ latest_alert.alert_sent }}</span></div>
+            <div class="info-row"><span class="info-key">Parent Call Requested</span><span class="info-val">{{ latest_alert.parent_call_requested }}</span></div>
+            <div class="info-row"><span class="info-key">Time</span><span class="info-val">{{ latest_alert.created_at|date:'d M Y, H:i' }}</span></div>
+        {% else %}
+            <p style="color:var(--text-muted);">No emergency alerts yet.</p>
+        {% endif %}
+    </div>
+
+    <div class="card">
+        <div class="card-title">Recent Driving Reports</div>
+        {% for trip in latest_trips %}
+            <div class="info-row">
+                <span class="info-key">{{ trip.created_at|date:'d M, H:i' }} • {{ trip.location|default:'Unknown' }}</span>
+                <span class="info-val">{{ trip.speed }} km/h • Risk {{ trip.risk_score }}</span>
+            </div>
+        {% empty %}
+            <p style="color:var(--text-muted);">No trips recorded yet.</p>
+        {% endfor %}
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-title">Quick Actions</div>
+    <div class="action-grid">
+        <a href="/trips/create/" class="action-btn"><span class="action-icon">Trip</span>Log Trip</a>
+        <a href="/trips/history/" class="action-btn"><span class="action-icon">History</span>Trip History</a>
+        <a href="/trips/report/" class="action-btn"><span class="action-icon">Report</span>Safety Report</a>
+        <a href="/trips/weekly-report/" class="action-btn"><span class="action-icon">Week</span>Weekly Report</a>
+        <a href="/trips/gps/" class="action-btn"><span class="action-icon">GPS</span>GPS Demo</a>
+        <a href="/alerts/simulate-accident/" class="action-btn red"><span class="action-icon">SOS</span>Accident Flow</a>
+        <a href="/alerts/history/" class="action-btn"><span class="action-icon">Alerts</span>Alert History</a>
+        <a href="/alerts/notifications/" class="action-btn"><span class="action-icon">Push</span>Notification Logs</a>
+    </div>
+</div>
+{% endblock %}

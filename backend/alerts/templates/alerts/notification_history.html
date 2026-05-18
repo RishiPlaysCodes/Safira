@@ -1,0 +1,26 @@
+{% extends 'base.html' %}
+{% block title %}Notification History — SafeRide{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">Notification History</h1>
+    <p class="page-subtitle">Phase 4 logs every simulated SMS, push notification, and parent call request.</p>
+</div>
+
+<div class="card">
+    {% for notification in notifications %}
+        <div class="info-row">
+            <span class="info-key">
+                {{ notification.created_at|date:'d M Y, H:i' }} • {{ notification.channel|upper }}
+            </span>
+            <span class="info-val">
+                {{ notification.status|title }} → {{ notification.recipient }}
+            </span>
+        </div>
+        <p style="color:var(--text-muted); margin:8px 0 18px; white-space:pre-line;">{{ notification.message }}</p>
+    {% empty %}
+        <p style="color:var(--text-muted);">No notification logs yet. Trigger Manual SOS, accident countdown, or detector demo.</p>
+    {% endfor %}
+</div>
+
+<a href="/dashboard/" class="btn btn-secondary">Back to Dashboard</a>
+{% endblock %}

@@ -1,0 +1,10 @@
+{% extends 'base.html' %}
+{% block title %}Alert Cancelled — SafeRide Guardian{% endblock %}
+{% block content %}
+<div class="card" style="max-width:640px; margin:0 auto; text-align:center;">
+    <div class="empty-icon">✅</div>
+    <h1 class="page-title">Alert Cancelled</h1>
+    <p style="color:var(--text-muted); margin:18px 0;">The user marked themselves safe. No guardian alert was sent.</p>
+    <a href="/dashboard/" class="btn btn-primary">Back to Dashboard</a>
+</div>
+{% endblock %}

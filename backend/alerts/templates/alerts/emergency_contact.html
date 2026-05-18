@@ -1,0 +1,13 @@
+{% extends 'base.html' %}
+{% block title %}Emergency Contact — SafeRide Guardian{% endblock %}
+{% block content %}
+<div class="page-header"><h1 class="page-title">Emergency Contact</h1><p class="page-subtitle">This contact is used for accident alerts and manual SOS simulation.</p></div>
+<div class="card" style="max-width:640px; margin:0 auto;">
+    <form method="POST">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <button class="btn btn-primary" type="submit">Save Contact</button>
+        <a href="/dashboard/" class="btn btn-secondary">Back</a>
+    </form>
+</div>
+{% endblock %}

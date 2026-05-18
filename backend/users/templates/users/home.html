@@ -1,0 +1,126 @@
+{% extends 'base.html' %}
+{% block title %}SafeRide Guardian — AI Road Safety{% endblock %}
+
+{% block content %}
+<style>
+    .hero {
+        min-height: 80vh;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        position: relative;
+    }
+
+    .hero-tag {
+        font-size: 12px;
+        letter-spacing: 3px;
+        text-transform: uppercase;
+        color: var(--accent);
+        margin-bottom: 20px;
+        font-weight: 600;
+    }
+
+    .hero-title {
+        font-family: 'Rajdhani', sans-serif;
+        font-size: clamp(52px, 8vw, 90px);
+        font-weight: 700;
+        line-height: 0.95;
+        letter-spacing: -1px;
+        margin-bottom: 28px;
+        background: linear-gradient(135deg, #e8f0fe 30%, var(--accent) 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+    }
+
+    .hero-desc {
+        font-size: 18px;
+        color: var(--text-muted);
+        max-width: 520px;
+        line-height: 1.7;
+        margin-bottom: 40px;
+    }
+
+    .hero-cta {
+        display: flex;
+        gap: 14px;
+        justify-content: center;
+        flex-wrap: wrap;
+    }
+
+    .features {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 20px;
+        margin-top: 80px;
+    }
+
+    .feat-card {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 28px 24px;
+        text-align: left;
+        transition: border-color 0.2s;
+    }
+
+    .feat-card:hover { border-color: var(--accent); }
+
+    .feat-icon { font-size: 32px; margin-bottom: 14px; }
+
+    .feat-title {
+        font-family: 'Rajdhani', sans-serif;
+        font-size: 18px;
+        font-weight: 700;
+        color: var(--text);
+        margin-bottom: 8px;
+    }
+
+    .feat-desc { font-size: 14px; color: var(--text-muted); line-height: 1.6; }
+
+    .glow-line {
+        width: 80px;
+        height: 2px;
+        background: linear-gradient(90deg, var(--accent), transparent);
+        margin: 0 auto 20px;
+    }
+</style>
+
+<div class="hero">
+    <div class="glow-line"></div>
+    <p class="hero-tag">AI-Powered Road Safety Platform</p>
+    <h1 class="hero-title">Your Guardian<br>On Every Road</h1>
+    <p class="hero-desc">
+        Detect risky driving, identify accident-like situations, and alert your loved ones — intelligently, without false alarms.
+    </p>
+    <div class="hero-cta">
+        <a href="/signup/" class="btn btn-primary" style="font-size:16px; padding: 14px 32px;">Get Started →</a>
+        <a href="/login/" class="btn btn-secondary" style="font-size:16px; padding: 14px 32px;">Login</a>
+    </div>
+
+    <div class="features">
+        <div class="feat-card">
+            <div class="feat-icon">🛡️</div>
+            <div class="feat-title">Smart Accident Detection</div>
+            <p class="feat-desc">10-second confirmation window prevents false emergency alerts from bumps or potholes.</p>
+        </div>
+        <div class="feat-card">
+            <div class="feat-icon">📊</div>
+            <div class="feat-title">Safety Analytics</div>
+            <p class="feat-desc">Track your driving score, overspeed count, and earn badges based on your behavior.</p>
+        </div>
+        <div class="feat-card">
+            <div class="feat-icon">🚨</div>
+            <div class="feat-title">Guardian Alerts</div>
+            <p class="feat-desc">Emergency contacts get notified immediately when you don't respond to an alert.</p>
+        </div>
+        <div class="feat-card">
+            <div class="feat-icon">📍</div>
+            <div class="feat-title">Trip Tracking</div>
+            <p class="feat-desc">Log trips with speed and location. View full history and overspeed events anytime.</p>
+        </div>
+    </div>
+</div>
+{% endblock %}

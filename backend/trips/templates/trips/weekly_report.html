@@ -1,0 +1,43 @@
+{% extends 'base.html' %}
+{% block title %}Weekly Report — SafeRide Guardian{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">Weekly Safety Report</h1>
+    <p class="page-subtitle">A 7-day summary that can be shared with the guardian.</p>
+</div>
+
+<div class="stat-grid">
+    <div class="stat-box"><div class="stat-value">{{ summary.total_trips }}</div><div class="stat-label">Trips</div></div>
+    <div class="stat-box"><div class="stat-value" style="color:var(--warning)">{{ summary.overspeed_events }}</div><div class="stat-label">Overspeed</div></div>
+    <div class="stat-box"><div class="stat-value" style="color:var(--danger)">{{ summary.red_light_events }}</div><div class="stat-label">Red Lights</div></div>
+    <div class="stat-box"><div class="stat-value" style="color:var(--danger)">{{ summary.helmet_issues }}</div><div class="stat-label">Helmet Issues</div></div>
+    <div class="stat-box"><div class="stat-value">{{ summary.zone_visits }}</div><div class="stat-label">Zone Visits</div></div>
+    <div class="stat-box"><div class="stat-value">{{ summary.average_risk }}</div><div class="stat-label">Average Risk</div></div>
+</div>
+
+<div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap:20px;">
+    <div class="card">
+        <div class="card-title">Weekly Tags</div>
+        {% if summary.tags %}
+            {% for tag in summary.tags %}
+                <span class="badge badge-good">{{ tag }}</span>
+            {% endfor %}
+        {% else %}
+            <p style="color:var(--text-muted);">No risk tags recorded this week.</p>
+        {% endif %}
+    </div>
+
+    <div class="card">
+        <div class="card-title">AI Observation Summary</div>
+        <div class="info-row"><span class="info-key">Helmet checks</span><span class="info-val">{{ summary.helmet_observations }}</span></div>
+        <div class="info-row"><span class="info-key">Red-light checks</span><span class="info-val">{{ summary.red_light_observations }}</span></div>
+        <div class="info-row"><span class="info-key">Traffic-density checks</span><span class="info-val">{{ summary.traffic_density_observations }}</span></div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-title">Share with Guardian</div>
+    <p style="color:var(--text-dim); margin-bottom:16px;">Send this week's summary as a guardian notification and push alert when Firebase is configured.</p>
+    <a href="/trips/weekly-report/send/" class="btn btn-primary">Send Weekly Report</a>
+</div>
+{% endblock %}

@@ -1,0 +1,17 @@
+{% extends 'base.html' %}
+{% block title %}Log Safety Event — SafeRide Guardian{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">Log Trip / Safety Event</h1>
+    <p class="page-subtitle">This demo form simulates the signals that future GPS, Maps, camera, and sensors will capture automatically.</p>
+</div>
+<div class="card" style="max-width:720px; margin:0 auto;">
+    <div class="card-title">Trip Data</div>
+    <form method="POST">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <button class="btn btn-primary" type="submit">Save Report</button>
+        <a href="/dashboard/" class="btn btn-secondary">Back</a>
+    </form>
+</div>
+{% endblock %}

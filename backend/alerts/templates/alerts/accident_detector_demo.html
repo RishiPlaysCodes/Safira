@@ -1,0 +1,78 @@
+{% extends 'base.html' %}
+{% block title %}Accident Detector Demo{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1>Phase 3 Accident Detector</h1>
+    <p>Test the accident-risk decision engine without using a mobile sensor app.</p>
+</div>
+
+<div class="grid two-col">
+    <div class="card">
+        <h2>Sensor Signal Input</h2>
+        <form method="POST">
+            {% csrf_token %}
+
+            <label>Location</label>
+            <input type="text" name="location" value="Demo Location - Delhi" />
+
+            <label>Impact/Jerk Level (0-10)</label>
+            <input type="number" name="impact_level" min="0" max="10" value="8" />
+
+            <label>Speed Before Event (km/h)</label>
+            <input type="number" name="speed_before" min="0" value="55" />
+
+            <label>Speed After Event (km/h)</label>
+            <input type="number" name="speed_after" min="0" value="0" />
+
+            <label>No Movement Seconds</label>
+            <input type="number" name="no_movement_seconds" min="0" value="45" />
+
+            <label class="checkbox-row">
+                <input type="checkbox" name="phone_angle_changed" checked />
+                Phone orientation changed suddenly
+            </label>
+
+            <label class="checkbox-row">
+                <input type="checkbox" name="user_confirmed" />
+                User confirmed accident manually
+            </label>
+
+            <button type="submit" class="btn danger">Analyze Accident Risk</button>
+        </form>
+    </div>
+
+    <div class="card">
+        <h2>Detection Result</h2>
+        {% if result %}
+            <p><strong>Risk Score:</strong> {{ result.score }}/100</p>
+            <p><strong>Severity:</strong> {{ result.severity }}</p>
+            <p><strong>Guardian Alert Sent:</strong> {{ result.guardian_alert_sent }}</p>
+            <p><strong>Parent Call Requested:</strong> {{ result.parent_call_requested }}</p>
+            <p><strong>Speed Drop:</strong> {{ result.speed_drop }} km/h</p>
+            <p><strong>Message:</strong> {{ result.message }}</p>
+            <h3>Reasons</h3>
+            <ul>
+                {% for reason in result.reasons %}
+                    <li>{{ reason }}</li>
+                {% endfor %}
+            </ul>
+            {% if alert %}
+                <p><strong>Saved Alert ID:</strong> {{ alert.id }}</p>
+            {% endif %}
+        {% else %}
+            <p>No signal analyzed yet.</p>
+            <p>Use this page to test false-alarm prevention.</p>
+        {% endif %}
+    </div>
+</div>
+
+<div class="card">
+    <h2>False Alarm Prevention Rules</h2>
+    <ul>
+        <li>Small bump alone: no guardian alert.</li>
+        <li>Normal stopping alone: no guardian alert.</li>
+        <li>Strong impact + sudden speed drop + no movement: high accident suspicion.</li>
+        <li>User-confirmed accident: immediate parent call/message request.</li>
+    </ul>
+</div>
+{% endblock %}

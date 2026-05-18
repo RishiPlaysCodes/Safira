@@ -1,0 +1,45 @@
+{% extends 'base.html' %}
+{% block title %}Emergency Alert Sent — SafeRide{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">Emergency Alert Sent</h1>
+    <p class="page-subtitle">SafeRide Guardian has created guardian notification logs for this emergency flow.</p>
+</div>
+
+<div class="card">
+    <div class="card-title">Alert Details</div>
+    <div class="info-row"><span class="info-key">Severity</span><span class="info-val">{{ alert.severity|title }}</span></div>
+    <div class="info-row"><span class="info-key">Source</span><span class="info-val">{{ alert.source|title }}</span></div>
+    <div class="info-row"><span class="info-key">Location</span><span class="info-val">{{ alert.location }}</span></div>
+    <div class="info-row"><span class="info-key">Parent Call Requested</span><span class="info-val">{{ alert.parent_call_requested }}</span></div>
+    <p style="color:var(--text-muted); white-space:pre-line;">{{ alert.message }}</p>
+</div>
+
+<div class="card">
+    <div class="card-title">Guardian Contact</div>
+    {% if contact %}
+        <div class="info-row"><span class="info-key">Name</span><span class="info-val">{{ contact.contact_name }}</span></div>
+        <div class="info-row"><span class="info-key">Phone</span><span class="info-val">{{ contact.contact_phone }}</span></div>
+        <div class="info-row"><span class="info-key">Relation</span><span class="info-val">{{ contact.relationship|default:'—' }}</span></div>
+    {% else %}
+        <div class="alert-banner error">No emergency contact found. Add a contact for real notifications.</div>
+    {% endif %}
+</div>
+
+<div class="card">
+    <div class="card-title">Phase 4 Notification Logs</div>
+    {% for log in notification_logs %}
+        <div class="info-row">
+            <span class="info-key">{{ log.channel|upper }}</span>
+            <span class="info-val">{{ log.status|title }} → {{ log.recipient }}</span>
+        </div>
+    {% empty %}
+        <p style="color:var(--text-muted);">No notification log was created for this alert.</p>
+    {% endfor %}
+</div>
+
+<div style="display:flex; gap:10px; flex-wrap:wrap;">
+    <a href="/alerts/notifications/" class="btn btn-secondary">View Notification History</a>
+    <a href="/dashboard/" class="btn btn-primary">Back to Dashboard</a>
+</div>
+{% endblock %}

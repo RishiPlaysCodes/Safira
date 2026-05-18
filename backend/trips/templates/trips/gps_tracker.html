@@ -1,0 +1,119 @@
+{% extends 'base.html' %}
+{% block title %}GPS Tracker — SafeRide Guardian{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">GPS Tracker</h1>
+    <p class="page-subtitle">Real-time speed and location monitoring</p>
+</div>
+
+<div style="display:grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+    <div class="card" style="text-align:center;">
+        <div class="card-title" style="justify-content:center;">Current Speed</div>
+        <div id="speed-val" style="font-family:'Rajdhani',sans-serif; font-size:72px; font-weight:700; color:var(--accent); line-height:1;">—</div>
+        <div style="font-size:14px; color:var(--text-muted); margin-top:4px;">km/h</div>
+        <div id="speed-status" style="margin-top:16px; font-size:14px; color:var(--text-muted);">Waiting for GPS...</div>
+    </div>
+
+    <div class="card">
+        <div class="card-title">Location Data</div>
+        <div class="info-row">
+            <span class="info-key">Latitude</span>
+            <span class="info-val" id="lat">—</span>
+        </div>
+        <div class="info-row">
+            <span class="info-key">Longitude</span>
+            <span class="info-val" id="lon">—</span>
+        </div>
+        <div class="info-row">
+            <span class="info-key">Accuracy</span>
+            <span class="info-val" id="acc">—</span>
+        </div>
+        <div class="info-row">
+            <span class="info-key">GPS Status</span>
+            <span id="gps-status"><span class="pill pill-warn">Inactive</span></span>
+        </div>
+        <div style="margin-top: 20px;">
+            <button onclick="startTracking()" id="start-btn" class="btn btn-primary" style="width:100%; justify-content:center;">
+                Start GPS Tracking
+            </button>
+            <button onclick="stopTracking()" id="stop-btn" class="btn btn-secondary" style="width:100%; justify-content:center; display:none; margin-top:8px;">
+                Stop Tracking
+            </button>
+        </div>
+    </div>
+</div>
+
+<div class="card" id="alert-panel" style="display:none; border-color: var(--danger);">
+    <div style="display:flex; align-items:center; gap:14px;">
+        <span style="font-size:32px;">⚠️</span>
+        <div>
+            <div style="font-family:'Rajdhani',sans-serif; font-size:20px; font-weight:700; color:var(--danger);">OVERSPEED DETECTED</div>
+            <p style="color:var(--text-muted); font-size:14px; margin-top:4px;">You are exceeding 40 km/h. Please slow down.</p>
+        </div>
+    </div>
+</div>
+
+<script>
+let watchId = null;
+
+function startTracking() {
+    if (!navigator.geolocation) {
+        document.getElementById('speed-status').textContent = 'GPS not supported on this device.';
+        return;
+    }
+
+    document.getElementById('start-btn').style.display = 'none';
+    document.getElementById('stop-btn').style.display = 'flex';
+    document.getElementById('gps-status').innerHTML = '<span class="pill pill-ok">Active ●</span>';
+
+    watchId = navigator.geolocation.watchPosition(
+        function(position) {
+            let speed = position.coords.speed;
+            let lat = position.coords.latitude.toFixed(6);
+            let lon = position.coords.longitude.toFixed(6);
+            let acc = position.coords.accuracy ? position.coords.accuracy.toFixed(0) + 'm' : '—';
+
+            document.getElementById('lat').textContent = lat;
+            document.getElementById('lon').textContent = lon;
+            document.getElementById('acc').textContent = acc;
+
+            if (speed === null || speed === undefined) {
+                document.getElementById('speed-val').textContent = '—';
+                document.getElementById('speed-status').textContent = 'Speed data not available on this device';
+            } else {
+                let kmh = speed * 3.6;
+                document.getElementById('speed-val').textContent = kmh.toFixed(1);
+
+                let panel = document.getElementById('alert-panel');
+                let speedEl = document.getElementById('speed-val');
+
+                if (kmh > 40) {
+                    speedEl.style.color = 'var(--danger)';
+                    panel.style.display = 'block';
+                    document.getElementById('speed-status').textContent = '⚠️ Overspeeding! Slow down.';
+                } else {
+                    speedEl.style.color = 'var(--success)';
+                    panel.style.display = 'none';
+                    document.getElementById('speed-status').textContent = '✓ Speed is safe';
+                }
+            }
+        },
+        function(error) {
+            document.getElementById('speed-status').textContent = 'GPS Error: ' + error.message;
+            document.getElementById('gps-status').innerHTML = '<span class="pill pill-alert">Error</span>';
+        },
+        { enableHighAccuracy: true }
+    );
+}
+
+function stopTracking() {
+    if (watchId) navigator.geolocation.clearWatch(watchId);
+    document.getElementById('start-btn').style.display = 'flex';
+    document.getElementById('stop-btn').style.display = 'none';
+    document.getElementById('gps-status').innerHTML = '<span class="pill pill-warn">Inactive</span>';
+    document.getElementById('speed-status').textContent = 'Tracking stopped';
+    document.getElementById('alert-panel').style.display = 'none';
+}
+</script>
+{% endblock %}

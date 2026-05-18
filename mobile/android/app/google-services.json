@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "961973250450",
+    "project_id": "safira-795cc",
+    "storage_bucket": "safira-795cc.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:961973250450:android:da2ad76dcd53f89b78394b",
+        "android_client_info": {
+          "package_name": "com.example.saferide_mobile"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDCmNibIA33dqy8DZwkz0P1uD6w8k2QT_c"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

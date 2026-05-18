@@ -1,0 +1,16 @@
+{% extends 'base.html' %}
+{% block title %}Safety Report — SafeRide Guardian{% endblock %}
+{% block content %}
+<div class="page-header"><h1 class="page-title">Safety Report</h1><p class="page-subtitle">Demo report for overspeeding, red light crossing, helmet compliance, and risky driving.</p></div>
+<div class="stat-grid">
+    <div class="stat-box"><div class="stat-value">{{ total_trips }}</div><div class="stat-label">Trips</div></div>
+    <div class="stat-box"><div class="stat-value" style="color:var(--warning)">{{ overspeed }}</div><div class="stat-label">Overspeed</div></div>
+    <div class="stat-box"><div class="stat-value" style="color:var(--danger)">{{ red_light }}</div><div class="stat-label">Red Light</div></div>
+    <div class="stat-box"><div class="stat-value" style="color:var(--danger)">{{ helmet_violations }}</div><div class="stat-label">Helmet</div></div>
+    <div class="stat-box"><div class="stat-value">{{ avg_risk }}</div><div class="stat-label">Avg Risk</div></div>
+</div>
+<div class="card"><div class="card-title">Report Summary</div>
+    <p style="color:var(--text-muted); line-height:1.7;">This page is the web-MVP report. In the mobile version, these values will come from GPS, Google Maps zones, accelerometer, camera/AI helmet detection, and signal-zone logic.</p>
+</div>
+<a href="/dashboard/" class="btn btn-secondary">Back to Dashboard</a>
+{% endblock %}
