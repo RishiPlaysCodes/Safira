@@ -11,6 +11,11 @@ urlpatterns = [
     path('history/', views.alert_history, name='alert_history'),
     path('notifications/', views.notification_history, name='notification_history'),
     path('detector-demo/', views.accident_detector_demo, name='accident_detector_demo'),
+    # Live Location
+    path('api/live-location/', views.receive_live_location, name='receive_live_location'),
+    path('api/live-location/<str:session_id>/', views.get_live_location, name='get_live_location'),
+    path('live-track/<str:session_id>/', views.live_track_page, name='live_track_page'),
+    # API endpoints
     path('api/accident-signal/', views.receive_accident_signal, name='receive_accident_signal'),
     path('api/register-device/', views.register_device, name='register_device'),
     path('api/test-notification/', views.test_notification_api, name='test_notification_api'),

@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SafeRide Guardian - Live Tracking</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', system-ui, sans-serif; background: #0a0e21; color: #f5f5f5; min-height: 100vh; }
+        .header { background: linear-gradient(135deg, #1a1f3a, #0a0e21); padding: 20px; border-bottom: 1px solid rgba(255,255,255,0.1); }
+        .header h1 { font-size: 1.5rem; background: linear-gradient(90deg, #4fc3f7, #00e5ff); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .header p { color: #b0bec5; font-size: 0.85rem; margin-top: 4px; }
+        .status-bar { display: flex; gap: 12px; padding: 12px 20px; background: rgba(255,255,255,0.03); }
+        .status-item { display: flex; align-items: center; gap: 6px; font-size: 0.8rem; }
+        .status-dot { width: 8px; height: 8px; border-radius: 50%; animation: pulse 1.5s infinite; }
+        .status-dot.active { background: #00e676; box-shadow: 0 0 8px #00e676; }
+        .status-dot.stopped { background: #ff9100; }
+        .status-dot.emergency { background: #ff1744; box-shadow: 0 0 12px #ff1744; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+        #map { height: 50vh; width: 100%; }
+        .info-panel { padding: 20px; }
+        .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+        .info-card { background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1); border-radius: 16px; padding: 16px; }
+        .info-card .label { font-size: 0.75rem; color: #b0bec5; text-transform: uppercase; letter-spacing: 1px; }
+        .info-card .value { font-size: 1.3rem; font-weight: 700; margin-top: 4px; color: #4fc3f7; }
+        .emergency-banner { background: linear-gradient(135deg, rgba(255,23,68,0.2), rgba(255,145,0,0.1)); border: 1px solid rgba(255,23,68,0.4); border-radius: 16px; padding: 16px; margin: 12px 20px; text-align: center; }
+        .emergency-banner h3 { color: #ff1744; font-size: 1rem; }
+        .no-session { text-align: center; padding: 60px 20px; }
+        .no-session h2 { color: #b0bec5; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>SafeRide Guardian</h1>
+        <p>Live Rider Tracking</p>
+    </div>
+
+    {% if session %}
+    <div class="status-bar">
+        <div class="status-item">
+            <div class="status-dot {{ session.status }}"></div>
+            <span>{{ session.get_status_display }}</span>
+        </div>
+        <div class="status-item">
+            <span>Rider: <strong>{{ session.user.username }}</strong></span>
+        </div>
+        <div class="status-item">
+            <span id="last-update">Updated: just now</span>
+        </div>
+    </div>
+
+    {% if session.status == 'emergency' %}
+    <div class="emergency-banner">
+        <h3>EMERGENCY ALERT ACTIVE</h3>
+        <p style="color:#b0bec5;font-size:0.85rem;margin-top:4px;">Rider may need help. Location updating in real-time.</p>
+    </div>
+    {% endif %}
+
+    <div id="map"></div>
+
+    <div class="info-panel">
+        <div class="info-grid">
+            <div class="info-card">
+                <div class="label">Speed</div>
+                <div class="value" id="speed">{{ session.speed_kmh|floatformat:1 }} km/h</div>
+            </div>
+            <div class="info-card">
+                <div class="label">Coordinates</div>
+                <div class="value" style="font-size:0.9rem;" id="coords">{{ session.latitude|floatformat:5 }}, {{ session.longitude|floatformat:5 }}</div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        const sessionId = '{{ session.session_id }}';
+        let lat = {{ session.latitude }};
+        let lng = {{ session.longitude }};
+
+        const map = L.map('map').setView([lat || 20.5937, lng || 78.9629], lat ? 16 : 5);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: 'SafeRide Guardian'
+        }).addTo(map);
+
+        const marker = L.marker([lat || 20.5937, lng || 78.9629]).addTo(map)
+            .bindPopup('Rider Location').openPopup();
+
+        // Poll for updates every 3 seconds
+        setInterval(async () => {
+            try {
+                const res = await fetch(`/alerts/api/live-location/${sessionId}/`);
+                if (res.ok) {
+                    const data = await res.json();
+                    lat = data.latitude;
+                    lng = data.longitude;
+                    marker.setLatLng([lat, lng]);
+                    map.panTo([lat, lng]);
+                    document.getElementById('speed').textContent = data.speed_kmh.toFixed(1) + ' km/h';
+                    document.getElementById('coords').textContent = lat.toFixed(5) + ', ' + lng.toFixed(5);
+                    document.getElementById('last-update').textContent = 'Updated: just now';
+                }
+            } catch (e) {}
+        }, 3000);
+    </script>
+
+    {% else %}
+    <div class="no-session">
+        <h2>Session Not Found</h2>
+        <p style="color:#b0bec5;margin-top:8px;">This tracking link may have expired or is invalid.</p>
+    </div>
+    {% endif %}
+</body>
+</html>

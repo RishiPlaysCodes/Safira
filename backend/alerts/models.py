@@ -2,6 +2,29 @@ from django.db import models
 from django.contrib.auth.models import User
 
 
+class LiveLocationSession(models.Model):
+    STATUS_CHOICES = [
+        ('active', 'Active'),
+        ('stopped', 'Stopped'),
+        ('emergency', 'Emergency'),
+    ]
+
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='live_sessions')
+    session_id = models.CharField(max_length=200, unique=True, db_index=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='active')
+    latitude = models.FloatField(default=0)
+    longitude = models.FloatField(default=0)
+    speed_kmh = models.FloatField(default=0)
+    last_updated = models.DateTimeField(auto_now=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f'{self.user.username} - {self.status} - {self.session_id[:20]}'
+
+    class Meta:
+        ordering = ['-last_updated']
+
+
 class EmergencyContact(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
     contact_name = models.CharField(max_length=100)

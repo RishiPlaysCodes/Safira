@@ -1,43 +1,101 @@
-{% extends 'base.html' %}
-{% block title %}Weekly Report — SafeRide Guardian{% endblock %}
-{% block content %}
-<div class="page-header">
-    <h1 class="page-title">Weekly Safety Report</h1>
-    <p class="page-subtitle">A 7-day summary that can be shared with the guardian.</p>
-</div>
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SafeRide Guardian - Weekly Report</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/remixicon@4.1.0/fonts/remixicon.css" rel="stylesheet">
+    <style>
+        :root { --bg: #0a0e21; --surface: #1a1f3a; --card: #1e2340; --blue: #4fc3f7; --cyan: #00e5ff; --purple: #7c4dff; --green: #00e676; --orange: #ff9100; --red: #ff1744; --text: #f5f5f5; --muted: #b0bec5; --glass: rgba(255,255,255,0.06); --border: rgba(255,255,255,0.1); }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; padding: 30px; }
+        .container { max-width: 900px; margin: 0 auto; }
+        h1 { font-size: 2rem; font-weight: 800; margin-bottom: 6px; background: linear-gradient(90deg, var(--blue), var(--cyan)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .subtitle { color: var(--muted); margin-bottom: 30px; }
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 14px; margin-bottom: 30px; }
+        .stat { background: var(--glass); border: 1px solid var(--border); border-radius: 18px; padding: 20px; text-align: center; }
+        .stat .num { font-size: 2.2rem; font-weight: 900; margin-bottom: 4px; }
+        .stat .label { font-size: 0.75rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; }
+        .panel { background: var(--glass); border: 1px solid var(--border); border-radius: 20px; padding: 24px; margin-bottom: 20px; }
+        .panel h3 { font-size: 1.1rem; margin-bottom: 14px; display: flex; align-items: center; gap: 8px; }
+        .tags { display: flex; flex-wrap: wrap; gap: 8px; }
+        .tag { padding: 6px 14px; border-radius: 12px; font-size: 0.8rem; font-weight: 600; background: rgba(79,195,247,0.1); border: 1px solid rgba(79,195,247,0.2); color: var(--blue); }
+        .btn { display: inline-flex; align-items: center; gap: 8px; padding: 12px 24px; border-radius: 12px; font-weight: 700; text-decoration: none; margin-top: 16px; border: none; cursor: pointer; font-size: 0.9rem; }
+        .btn-primary { background: linear-gradient(135deg, var(--blue), var(--cyan)); color: var(--bg); }
+        .btn-secondary { background: var(--glass); border: 1px solid var(--border); color: var(--text); }
+        .back-link { color: var(--muted); text-decoration: none; font-size: 0.85rem; display: inline-flex; align-items: center; gap: 6px; margin-bottom: 20px; }
+        .back-link:hover { color: var(--blue); }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="{% url 'dashboard' %}" class="back-link"><i class="ri-arrow-left-line"></i> Back to Dashboard</a>
+        <h1>Weekly Safety Report</h1>
+        <p class="subtitle">Last 7 days performance summary for {{ request.user.username }}</p>
 
-<div class="stat-grid">
-    <div class="stat-box"><div class="stat-value">{{ summary.total_trips }}</div><div class="stat-label">Trips</div></div>
-    <div class="stat-box"><div class="stat-value" style="color:var(--warning)">{{ summary.overspeed_events }}</div><div class="stat-label">Overspeed</div></div>
-    <div class="stat-box"><div class="stat-value" style="color:var(--danger)">{{ summary.red_light_events }}</div><div class="stat-label">Red Lights</div></div>
-    <div class="stat-box"><div class="stat-value" style="color:var(--danger)">{{ summary.helmet_issues }}</div><div class="stat-label">Helmet Issues</div></div>
-    <div class="stat-box"><div class="stat-value">{{ summary.zone_visits }}</div><div class="stat-label">Zone Visits</div></div>
-    <div class="stat-box"><div class="stat-value">{{ summary.average_risk }}</div><div class="stat-label">Average Risk</div></div>
-</div>
+        <div class="stats-grid">
+            <div class="stat">
+                <div class="num" style="color:var(--blue)">{{ summary.total_trips }}</div>
+                <div class="label">Total Trips</div>
+            </div>
+            <div class="stat">
+                <div class="num" style="color:var(--red)">{{ summary.overspeed_events }}</div>
+                <div class="label">Overspeed</div>
+            </div>
+            <div class="stat">
+                <div class="num" style="color:var(--orange)">{{ summary.red_light_events }}</div>
+                <div class="label">Red Lights</div>
+            </div>
+            <div class="stat">
+                <div class="num" style="color:var(--purple)">{{ summary.helmet_issues }}</div>
+                <div class="label">Helmet Issues</div>
+            </div>
+            <div class="stat">
+                <div class="num" style="color:var(--cyan)">{{ summary.zone_visits }}</div>
+                <div class="label">Zone Visits</div>
+            </div>
+            <div class="stat">
+                <div class="num" style="color:{% if summary.average_risk > 50 %}var(--red){% elif summary.average_risk > 25 %}var(--orange){% else %}var(--green){% endif %}">{{ summary.average_risk }}</div>
+                <div class="label">Avg Risk Score</div>
+            </div>
+        </div>
 
-<div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap:20px;">
-    <div class="card">
-        <div class="card-title">Weekly Tags</div>
+        <div class="panel">
+            <h3><i class="ri-eye-line" style="color:var(--cyan)"></i> AI Vision Observations</h3>
+            <div class="stats-grid" style="margin-bottom:0;">
+                <div class="stat">
+                    <div class="num" style="color:var(--orange);font-size:1.5rem;">{{ summary.helmet_observations }}</div>
+                    <div class="label">Helmet Checks</div>
+                </div>
+                <div class="stat">
+                    <div class="num" style="color:var(--red);font-size:1.5rem;">{{ summary.red_light_observations }}</div>
+                    <div class="label">Red Light Scans</div>
+                </div>
+                <div class="stat">
+                    <div class="num" style="color:var(--purple);font-size:1.5rem;">{{ summary.traffic_density_observations }}</div>
+                    <div class="label">Traffic Analysis</div>
+                </div>
+            </div>
+        </div>
+
         {% if summary.tags %}
-            {% for tag in summary.tags %}
-                <span class="badge badge-good">{{ tag }}</span>
-            {% endfor %}
-        {% else %}
-            <p style="color:var(--text-muted);">No risk tags recorded this week.</p>
+        <div class="panel">
+            <h3><i class="ri-price-tag-3-line" style="color:var(--blue)"></i> Safety Tags This Week</h3>
+            <div class="tags">
+                {% for tag in summary.tags %}
+                <span class="tag">{{ tag }}</span>
+                {% endfor %}
+            </div>
+        </div>
         {% endif %}
-    </div>
 
-    <div class="card">
-        <div class="card-title">AI Observation Summary</div>
-        <div class="info-row"><span class="info-key">Helmet checks</span><span class="info-val">{{ summary.helmet_observations }}</span></div>
-        <div class="info-row"><span class="info-key">Red-light checks</span><span class="info-val">{{ summary.red_light_observations }}</span></div>
-        <div class="info-row"><span class="info-key">Traffic-density checks</span><span class="info-val">{{ summary.traffic_density_observations }}</span></div>
+        <form method="POST" action="{% url 'send_weekly_report' %}">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-primary"><i class="ri-send-plane-line"></i> Send Report to Guardian</button>
+        </form>
+        <a href="{% url 'dashboard' %}" class="btn btn-secondary" style="margin-left:10px;"><i class="ri-dashboard-line"></i> Dashboard</a>
     </div>
-</div>
-
-<div class="card">
-    <div class="card-title">Share with Guardian</div>
-    <p style="color:var(--text-dim); margin-bottom:16px;">Send this week's summary as a guardian notification and push alert when Firebase is configured.</p>
-    <a href="/trips/weekly-report/send/" class="btn btn-primary">Send Weekly Report</a>
-</div>
-{% endblock %}
+</body>
+</html>
