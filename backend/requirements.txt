@@ -1,3 +1,26 @@
+# SafeRide Guardian - Backend Dependencies
+
+# Core Django
 Django>=5.0,<7.0
-djangorestframework>=3.15
-firebase-admin>=6.6
+djangorestframework>=3.14
+
+# Production server
+gunicorn>=21.2.0
+
+# Database (production)
+# psycopg2-binary>=2.9.9
+
+# Notifications
+twilio>=9.0.0
+
+# Firebase Admin SDK
+firebase-admin>=6.4.0
+
+# HTTP requests (for webhooks/external APIs)
+requests>=2.31.0
+
+# Environment variables
+python-dotenv>=1.0.0
+
+# CORS headers (for mobile app API access)
+django-cors-headers>=4.3.0

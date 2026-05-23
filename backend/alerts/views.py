@@ -196,6 +196,64 @@ def register_device(request):
 
 
 @api_view(['POST'])
+def receive_live_location(request):
+    """Receive live location updates from mobile app."""
+    api_user = _api_user_from_request(request)
+    if api_user is None:
+        return Response({'error': 'Login first or send a valid username.'}, status=status.HTTP_401_UNAUTHORIZED)
+
+    from .models import LiveLocationSession
+
+    session_id = request.data.get('session_id', '')
+    location_status = request.data.get('status', 'active')
+    lat = float(request.data.get('latitude', 0))
+    lng = float(request.data.get('longitude', 0))
+    speed = float(request.data.get('speed_kmh', 0))
+
+    if not session_id:
+        return Response({'error': 'session_id is required.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    session, created = LiveLocationSession.objects.update_or_create(
+        session_id=session_id,
+        defaults={
+            'user': api_user,
+            'status': location_status,
+            'latitude': lat,
+            'longitude': lng,
+            'speed_kmh': speed,
+        }
+    )
+    return Response({
+        'message': 'Location updated.',
+        'session_id': session.session_id,
+        'status': session.status,
+        'tracking_url': f'/alerts/live-track/{session.session_id}/',
+    }, status=status.HTTP_200_OK)
+
+
+@api_view(['GET'])
+def get_live_location(request, session_id):
+    """Get current live location for a tracking session (guardian view)."""
+    from .models import LiveLocationSession
+
+    try:
+        session = LiveLocationSession.objects.get(session_id=session_id)
+    except LiveLocationSession.DoesNotExist:
+        return Response({'error': 'Session not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+    return Response({
+        'session_id': session.session_id,
+        'username': session.user.username,
+        'status': session.status,
+        'latitude': session.latitude,
+        'longitude': session.longitude,
+        'speed_kmh': session.speed_kmh,
+        'last_updated': session.last_updated.isoformat(),
+        'maps_link': f'https://maps.google.com/?q={session.latitude},{session.longitude}',
+    })
+
+
+@api_view(['POST'])
 def test_notification_api(request):
     api_user = _api_user_from_request(request)
     if api_user is None:
@@ -211,6 +269,16 @@ def test_notification_api(request):
     )
     logs = notify_guardian(alert, request_call=alert.parent_call_requested)
     return Response({'message': 'Simulated notification logs created.', 'logs_created': len(logs), 'recipients': [log.recipient for log in logs]}, status=status.HTTP_201_CREATED)
+
+
+def live_track_page(request, session_id):
+    """Public page for guardians to track rider live location."""
+    from .models import LiveLocationSession
+    try:
+        session = LiveLocationSession.objects.get(session_id=session_id)
+    except LiveLocationSession.DoesNotExist:
+        session = None
+    return render(request, 'alerts/live_track.html', {'session': session, 'session_id': session_id})
 
 
 @login_required

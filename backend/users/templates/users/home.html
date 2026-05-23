@@ -1,126 +1,100 @@
-{% extends 'base.html' %}
-{% block title %}SafeRide Guardian — AI Road Safety{% endblock %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SafeRide Guardian - AI Road Safety Platform</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/remixicon@4.1.0/fonts/remixicon.css" rel="stylesheet">
+    <style>
+        :root { --bg: #0a0e21; --surface: #1a1f3a; --card: #1e2340; --blue: #4fc3f7; --cyan: #00e5ff; --purple: #7c4dff; --green: #00e676; --orange: #ff9100; --red: #ff1744; --text: #f5f5f5; --muted: #b0bec5; --glass: rgba(255,255,255,0.06); --border: rgba(255,255,255,0.1); }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); overflow-x: hidden; }
 
-{% block content %}
-<style>
-    .hero {
-        min-height: 80vh;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        text-align: center;
-        position: relative;
-    }
+        .hero { min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 40px 20px; position: relative; }
+        .hero::before { content: ''; position: absolute; top: -50%; left: -50%; width: 200%; height: 200%; background: radial-gradient(circle at 30% 40%, rgba(79,195,247,0.08) 0%, transparent 50%), radial-gradient(circle at 70% 60%, rgba(124,77,255,0.06) 0%, transparent 50%); animation: rotate 30s linear infinite; }
+        @keyframes rotate { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
 
-    .hero-tag {
-        font-size: 12px;
-        letter-spacing: 3px;
-        text-transform: uppercase;
-        color: var(--accent);
-        margin-bottom: 20px;
-        font-weight: 600;
-    }
+        .hero-content { position: relative; z-index: 1; max-width: 700px; }
+        .logo { font-size: 3.5rem; font-weight: 900; background: linear-gradient(135deg, var(--blue), var(--cyan), var(--purple)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 8px; }
+        .tagline { font-size: 1.2rem; color: var(--muted); margin-bottom: 30px; line-height: 1.6; }
+        .hero-badges { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; margin-bottom: 40px; }
+        .hero-badge { padding: 8px 16px; border-radius: 20px; font-size: 0.8rem; font-weight: 600; border: 1px solid var(--border); background: var(--glass); }
 
-    .hero-title {
-        font-family: 'Rajdhani', sans-serif;
-        font-size: clamp(52px, 8vw, 90px);
-        font-weight: 700;
-        line-height: 0.95;
-        letter-spacing: -1px;
-        margin-bottom: 28px;
-        background: linear-gradient(135deg, #e8f0fe 30%, var(--accent) 100%);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        background-clip: text;
-    }
+        .cta-group { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; }
+        .btn { padding: 14px 32px; border-radius: 14px; font-size: 0.95rem; font-weight: 700; text-decoration: none; transition: all 0.3s; display: inline-flex; align-items: center; gap: 8px; }
+        .btn-primary { background: linear-gradient(135deg, var(--blue), var(--cyan)); color: var(--bg); box-shadow: 0 8px 25px rgba(79,195,247,0.3); }
+        .btn-primary:hover { transform: translateY(-3px); box-shadow: 0 12px 35px rgba(79,195,247,0.4); }
+        .btn-secondary { background: var(--glass); color: var(--text); border: 1px solid var(--border); }
+        .btn-secondary:hover { border-color: var(--blue); color: var(--blue); }
 
-    .hero-desc {
-        font-size: 18px;
-        color: var(--text-muted);
-        max-width: 520px;
-        line-height: 1.7;
-        margin-bottom: 40px;
-    }
+        .features { padding: 80px 20px; max-width: 1200px; margin: 0 auto; }
+        .features h2 { text-align: center; font-size: 2rem; margin-bottom: 50px; }
+        .features-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; }
+        .feature-card { background: var(--glass); border: 1px solid var(--border); border-radius: 20px; padding: 28px; transition: all 0.3s; }
+        .feature-card:hover { transform: translateY(-4px); border-color: var(--blue); box-shadow: 0 12px 40px rgba(0,0,0,0.3); }
+        .feature-card i { font-size: 2rem; margin-bottom: 14px; }
+        .feature-card h3 { font-size: 1.1rem; margin-bottom: 8px; }
+        .feature-card p { color: var(--muted); font-size: 0.85rem; line-height: 1.5; }
 
-    .hero-cta {
-        display: flex;
-        gap: 14px;
-        justify-content: center;
-        flex-wrap: wrap;
-    }
-
-    .features {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-        gap: 20px;
-        margin-top: 80px;
-    }
-
-    .feat-card {
-        background: var(--surface);
-        border: 1px solid var(--border);
-        border-radius: 12px;
-        padding: 28px 24px;
-        text-align: left;
-        transition: border-color 0.2s;
-    }
-
-    .feat-card:hover { border-color: var(--accent); }
-
-    .feat-icon { font-size: 32px; margin-bottom: 14px; }
-
-    .feat-title {
-        font-family: 'Rajdhani', sans-serif;
-        font-size: 18px;
-        font-weight: 700;
-        color: var(--text);
-        margin-bottom: 8px;
-    }
-
-    .feat-desc { font-size: 14px; color: var(--text-muted); line-height: 1.6; }
-
-    .glow-line {
-        width: 80px;
-        height: 2px;
-        background: linear-gradient(90deg, var(--accent), transparent);
-        margin: 0 auto 20px;
-    }
-</style>
-
-<div class="hero">
-    <div class="glow-line"></div>
-    <p class="hero-tag">AI-Powered Road Safety Platform</p>
-    <h1 class="hero-title">Your Guardian<br>On Every Road</h1>
-    <p class="hero-desc">
-        Detect risky driving, identify accident-like situations, and alert your loved ones — intelligently, without false alarms.
-    </p>
-    <div class="hero-cta">
-        <a href="/signup/" class="btn btn-primary" style="font-size:16px; padding: 14px 32px;">Get Started →</a>
-        <a href="/login/" class="btn btn-secondary" style="font-size:16px; padding: 14px 32px;">Login</a>
-    </div>
-
-    <div class="features">
-        <div class="feat-card">
-            <div class="feat-icon">🛡️</div>
-            <div class="feat-title">Smart Accident Detection</div>
-            <p class="feat-desc">10-second confirmation window prevents false emergency alerts from bumps or potholes.</p>
+        footer { text-align: center; padding: 40px; color: var(--muted); font-size: 0.8rem; border-top: 1px solid var(--border); }
+    </style>
+</head>
+<body>
+    <section class="hero">
+        <div class="hero-content">
+            <div class="logo">SafeRide Guardian</div>
+            <p class="tagline">AI-Powered Road Safety Platform for smart accident detection, guardian alerts, and intelligent ride monitoring.</p>
+            <div class="hero-badges">
+                <span class="hero-badge"><i class="ri-shield-check-line"></i> Accident Detection</span>
+                <span class="hero-badge"><i class="ri-phone-line"></i> Auto Guardian Alert</span>
+                <span class="hero-badge"><i class="ri-map-pin-line"></i> Live Location</span>
+                <span class="hero-badge"><i class="ri-speed-line"></i> Speed Monitoring</span>
+                <span class="hero-badge"><i class="ri-motorbike-line"></i> Helmet Detection</span>
+            </div>
+            <div class="cta-group">
+                <a href="{% url 'signup' %}" class="btn btn-primary"><i class="ri-user-add-line"></i> Get Started</a>
+                <a href="{% url 'login' %}" class="btn btn-secondary"><i class="ri-login-box-line"></i> Login</a>
+            </div>
         </div>
-        <div class="feat-card">
-            <div class="feat-icon">📊</div>
-            <div class="feat-title">Safety Analytics</div>
-            <p class="feat-desc">Track your driving score, overspeed count, and earn badges based on your behavior.</p>
+    </section>
+
+    <section class="features">
+        <h2>Intelligent Safety Features</h2>
+        <div class="features-grid">
+            <div class="feature-card">
+                <i class="ri-alarm-warning-line" style="color:var(--red)"></i>
+                <h3>Smart Accident Detection</h3>
+                <p>Multi-signal analysis: impact + speed drop + no movement + phone angle. Avoids false alarms from potholes and bumps.</p>
+            </div>
+            <div class="feature-card">
+                <i class="ri-map-pin-line" style="color:var(--green)"></i>
+                <h3>Live Location Sharing</h3>
+                <p>Real-time location sharing with guardians during rides and emergencies. Shareable tracking link.</p>
+            </div>
+            <div class="feature-card">
+                <i class="ri-phone-line" style="color:var(--blue)"></i>
+                <h3>Guardian Auto-Alert</h3>
+                <p>SMS + call + push notification to parents/guardians. 20-second countdown with "I Am Safe" cancel option.</p>
+            </div>
+            <div class="feature-card">
+                <i class="ri-speed-line" style="color:var(--orange)"></i>
+                <h3>Zone-Based Speed Limits</h3>
+                <p>Auto-adjusts speed limits near schools, hospitals, and danger zones using GPS and map data.</p>
+            </div>
+            <div class="feature-card">
+                <i class="ri-motorbike-line" style="color:var(--purple)"></i>
+                <h3>Helmet Detection (AI)</h3>
+                <p>Camera-based helmet detection using TFLite models. Instant guardian notification if helmet not worn.</p>
+            </div>
+            <div class="feature-card">
+                <i class="ri-bar-chart-line" style="color:var(--cyan)"></i>
+                <h3>Weekly Safety Reports</h3>
+                <p>Comprehensive weekly reports sent to guardians: overspeed, violations, helmet issues, risk analysis.</p>
+            </div>
         </div>
-        <div class="feat-card">
-            <div class="feat-icon">🚨</div>
-            <div class="feat-title">Guardian Alerts</div>
-            <p class="feat-desc">Emergency contacts get notified immediately when you don't respond to an alert.</p>
-        </div>
-        <div class="feat-card">
-            <div class="feat-icon">📍</div>
-            <div class="feat-title">Trip Tracking</div>
-            <p class="feat-desc">Log trips with speed and location. View full history and overspeed events anytime.</p>
-        </div>
-    </div>
-</div>
-{% endblock %}
+    </section>
+
+    <footer>SafeRide Guardian &copy; 2025 &middot; Built for road safety &middot; AI + Django + Flutter</footer>
+</body>
+</html>

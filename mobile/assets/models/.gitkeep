@@ -1,0 +1,6 @@
+# Place TFLite models here:
+# - helmet_detector.tflite (helmet worn/not_worn classification)
+# - traffic_signal.tflite (red/green/yellow detection)
+# - vehicle_counter.tflite (traffic density estimation)
+#
+# Training scripts are in /ai_training/
