@@ -1,34 +1,37 @@
-import 'dart:convert';
+import '../services/api_client.dart';
 
-import 'package:http/http.dart' as http;
-
+/// Repository for sending vision AI observations to the backend.
+/// Uses token-based authentication.
 class VisionRepository {
-  Future<void> sendObservation({
+  VisionRepository({required this.apiClient});
+
+  final ApiClient apiClient;
+
+  /// Send a vision observation (helmet detection, red light, traffic density).
+  Future<ApiResult> sendObservation({
     required String backendUrl,
-    required String username,
     required String type,
     required String label,
     required double confidence,
     required double latitude,
     required double longitude,
+    int? tripId,
   }) async {
-    if (backendUrl.isEmpty) return;
-    final uri = Uri.tryParse('$backendUrl/trips/api/vision-observation/');
-    if (uri == null) return;
+    if (backendUrl.isEmpty) {
+      return ApiResult.error('Backend URL not configured.');
+    }
 
-    await http
-        .post(
-          uri,
-          headers: {'Content-Type': 'application/json'},
-          body: jsonEncode({
-            'username': username,
-            'observation_type': type,
-            'label': label,
-            'confidence': confidence,
-            'latitude': latitude,
-            'longitude': longitude,
-          }),
-        )
-        .timeout(const Duration(seconds: 3));
+    return apiClient.postQuick(
+      backendUrl,
+      '/trips/api/vision-observation/',
+      {
+        'observation_type': type,
+        'label': label,
+        'confidence': confidence,
+        'latitude': latitude,
+        'longitude': longitude,
+        if (tripId != null) 'trip': tripId,
+      },
+    );
   }
 }

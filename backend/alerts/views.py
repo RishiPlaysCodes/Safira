@@ -1,15 +1,76 @@
-from django.contrib.auth.decorators import login_required
-from django.shortcuts import render, redirect, get_object_or_404
-from .forms import EmergencyContactForm
-from .models import DeviceRegistration, EmergencyContact, EmergencyAlert, EscalationEvent, NotificationLog
-from .serializers import DeviceRegistrationSerializer, EmergencyAlertSerializer
-from django.contrib.auth.models import User
-from rest_framework.decorators import api_view
-from rest_framework.response import Response
-from rest_framework import status
-from .detection_engine import calculate_accident_risk, to_bool
-from .notification_service import notify_guardian
+"""Alert views - web (session auth) and API (token auth) endpoints."""
 
+import logging
+
+from django.contrib.auth.decorators import login_required
+from django.shortcuts import get_object_or_404, redirect, render
+from rest_framework import serializers as drf_serializers
+from rest_framework import status
+from rest_framework.decorators import api_view, permission_classes, throttle_classes
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+from rest_framework.throttling import ScopedRateThrottle
+
+from .detection_engine import calculate_accident_risk, to_bool
+from .forms import EmergencyContactForm
+from .models import (
+    DeviceRegistration,
+    EmergencyAlert,
+    EmergencyContact,
+    EscalationEvent,
+    NotificationLog,
+)
+from .notification_service import notify_guardian
+from .serializers import DeviceRegistrationSerializer, EmergencyAlertSerializer
+
+logger = logging.getLogger('alerts')
+
+
+# ===========================================================================
+# INPUT VALIDATION SERIALIZERS
+# ===========================================================================
+
+class AccidentSignalInputSerializer(drf_serializers.Serializer):
+    """Validates accident signal data from mobile app."""
+    status = drf_serializers.CharField(max_length=50, required=False, allow_blank=True, default='')
+    speed = drf_serializers.FloatField(min_value=0, max_value=500, required=False, default=0)
+    speed_before = drf_serializers.FloatField(min_value=0, max_value=500, required=False, default=None)
+    speed_after = drf_serializers.FloatField(min_value=0, max_value=500, required=False, default=None)
+    impact_level = drf_serializers.FloatField(min_value=0, max_value=100, required=False, default=0)
+    impact_g = drf_serializers.FloatField(min_value=0, max_value=100, required=False, default=0)
+    no_movement_seconds = drf_serializers.IntegerField(min_value=0, max_value=3600, required=False, default=0)
+    phone_angle_changed = drf_serializers.BooleanField(required=False, default=False)
+    user_confirmed = drf_serializers.BooleanField(required=False, default=False)
+    location = drf_serializers.CharField(max_length=220, required=False, allow_blank=True, default='')
+    latitude = drf_serializers.FloatField(min_value=-90.0, max_value=90.0, required=False, allow_null=True, default=None)
+    longitude = drf_serializers.FloatField(min_value=-180.0, max_value=180.0, required=False, allow_null=True, default=None)
+
+
+class DeviceRegistrationInputSerializer(drf_serializers.Serializer):
+    """Validates device registration input."""
+    token = drf_serializers.CharField(max_length=255, required=True)
+    platform = drf_serializers.ChoiceField(choices=['android', 'ios'], default='android')
+
+
+class TestNotificationInputSerializer(drf_serializers.Serializer):
+    """Validates test notification input."""
+    location = drf_serializers.CharField(max_length=220, required=False, default='Notification test')
+    message = drf_serializers.CharField(max_length=500, required=False, default='SafeRide Guardian test notification.')
+    request_call = drf_serializers.BooleanField(required=False, default=False)
+
+
+# ===========================================================================
+# CUSTOM THROTTLE
+# ===========================================================================
+
+class AccidentSignalThrottle(ScopedRateThrottle):
+    """Throttle accident signals to prevent abuse (10/min per user)."""
+    scope = 'accident_signal'
+
+
+# ===========================================================================
+# WEB VIEWS (session-based auth)
+# ===========================================================================
 
 @login_required
 def emergency_contact_view(request):
@@ -33,7 +94,7 @@ def accident_simulation(request):
         location='Demo Location - live GPS will be attached by mobile app',
         severity='high',
         source='demo',
-        message='Possible accident detected. User did not respond within safety countdown.'
+        message='Possible accident detected. User did not respond within safety countdown.',
     )
     EscalationEvent.objects.create(alert=alert, stage='suspicion', message='Accident suspicion created.')
     return render(request, 'alerts/accident_countdown.html', {'alert': alert})
@@ -115,104 +176,6 @@ def notification_history(request):
     return render(request, 'alerts/notification_history.html', {'notifications': notifications})
 
 
-def _api_user_from_request(request):
-    if request.user and request.user.is_authenticated:
-        return request.user
-    username = request.data.get('username')
-    return User.objects.filter(username=username).first() if username else None
-
-
-@api_view(['POST'])
-def receive_accident_signal(request):
-    api_user = _api_user_from_request(request)
-    if api_user is None:
-        return Response({'error': 'Login first or send a valid username field for demo API testing.'}, status=status.HTTP_401_UNAUTHORIZED)
-
-    status_value = request.data.get('status', '')
-    speed_after = request.data.get('speed_after', request.data.get('speed', 0))
-    speed_before = request.data.get('speed_before', request.data.get('speed', 0))
-    impact_level = request.data.get('impact_level', request.data.get('impact_g', 0))
-    user_confirmed = request.data.get('user_confirmed', status_value in {'confirmed_no_response', 'manual_sos'})
-    decision = calculate_accident_risk(
-        impact_level=impact_level,
-        speed_before=speed_before,
-        speed_after=speed_after,
-        no_movement_seconds=request.data.get('no_movement_seconds', 0),
-        phone_angle_changed=request.data.get('phone_angle_changed', False),
-        user_confirmed=user_confirmed,
-    )
-    location = request.data.get('location', 'Mobile GPS location not provided')
-    is_confirmed = decision['severity'] == 'confirmed'
-    alert = EmergencyAlert.objects.create(
-        user=api_user,
-        location=location,
-        severity=decision['severity'],
-        source='impact',
-        message=decision['message'],
-        alert_sent=decision['guardian_alert_sent'],
-        parent_call_requested=decision['parent_call_requested'],
-        ambulance_requested=is_confirmed,
-        notes=(
-            f"risk_score={decision['score']}; speed_drop={decision['speed_drop']}; "
-            f"reasons={' | '.join(decision['reasons'])}; impact_level={impact_level}, "
-            f"speed_before={speed_before}, speed_after={speed_after}, "
-            f"no_movement_seconds={request.data.get('no_movement_seconds', 0)}, "
-            f"phone_angle_changed={request.data.get('phone_angle_changed', False)}, "
-            f"user_confirmed={request.data.get('user_confirmed', False)}"
-        )
-    )
-    EscalationEvent.objects.create(alert=alert, stage='suspicion', message='Accident signal received from mobile app.')
-    if alert.alert_sent:
-        EscalationEvent.objects.create(alert=alert, stage='guardian_notified', message='Guardian notified after accident signal.')
-    if is_confirmed:
-        EscalationEvent.objects.create(alert=alert, stage='rider_confirmed', message='Confirmed accident from mobile workflow.')
-        EscalationEvent.objects.create(alert=alert, stage='ambulance_requested', message='Ambulance workflow requested after confirmed mobile event.')
-    notification_logs = []
-    if alert.alert_sent or alert.parent_call_requested or alert.ambulance_requested:
-        notification_logs = notify_guardian(alert, request_call=alert.parent_call_requested, request_ambulance=alert.ambulance_requested)
-    return Response({
-        'message': 'Accident signal processed by notification-ready engine.',
-        'risk_score': decision['score'],
-        'severity': decision['severity'],
-        'reasons': decision['reasons'],
-        'guardian_alert_sent': alert.alert_sent,
-        'parent_call_requested': alert.parent_call_requested,
-        'ambulance_requested': alert.ambulance_requested,
-        'notification_logs_created': len(notification_logs),
-        'alert': EmergencyAlertSerializer(alert).data,
-    }, status=status.HTTP_201_CREATED)
-
-
-@api_view(['POST'])
-def register_device(request):
-    api_user = _api_user_from_request(request)
-    if api_user is None:
-        return Response({'error': 'Login first or send a valid username.'}, status=status.HTTP_401_UNAUTHORIZED)
-    token = request.data.get('token')
-    if not token:
-        return Response({'error': 'token is required.'}, status=status.HTTP_400_BAD_REQUEST)
-    device, _ = DeviceRegistration.objects.update_or_create(token=token, defaults={'user': api_user, 'platform': request.data.get('platform', 'android'), 'is_active': True})
-    return Response(DeviceRegistrationSerializer(device).data, status=status.HTTP_201_CREATED)
-
-
-@api_view(['POST'])
-def test_notification_api(request):
-    api_user = _api_user_from_request(request)
-    if api_user is None:
-        return Response({'error': 'Login first or send a valid username.'}, status=status.HTTP_401_UNAUTHORIZED)
-    alert = EmergencyAlert.objects.create(
-        user=api_user,
-        location=request.data.get('location', 'Phase 4 notification test'),
-        severity='medium',
-        source='demo',
-        message=request.data.get('message', 'SafeRide Guardian test notification.'),
-        alert_sent=True,
-        parent_call_requested=to_bool(request.data.get('request_call')),
-    )
-    logs = notify_guardian(alert, request_call=alert.parent_call_requested)
-    return Response({'message': 'Simulated notification logs created.', 'logs_created': len(logs), 'recipients': [log.recipient for log in logs]}, status=status.HTTP_201_CREATED)
-
-
 @login_required
 def accident_detector_demo(request):
     result = None
@@ -236,7 +199,7 @@ def accident_detector_demo(request):
             alert_sent=decision['guardian_alert_sent'],
             parent_call_requested=decision['parent_call_requested'],
             ambulance_requested=is_confirmed,
-            notes=f"Phase 4 web detector risk_score={decision['score']}; reasons={' | '.join(decision['reasons'])}"
+            notes=f"Web detector risk_score={decision['score']}; reasons={' | '.join(decision['reasons'])}",
         )
         EscalationEvent.objects.create(alert=alert, stage='suspicion', message='Web detector event created.')
         if alert.alert_sent:
@@ -247,3 +210,183 @@ def accident_detector_demo(request):
             notify_guardian(alert, request_call=alert.parent_call_requested, request_ambulance=alert.ambulance_requested)
         result = decision
     return render(request, 'alerts/accident_detector_demo.html', {'result': result, 'alert': alert})
+
+
+# ===========================================================================
+# API VIEWS (token-based auth - requires Authorization: Token <key>)
+# ===========================================================================
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+@throttle_classes([AccidentSignalThrottle])
+def receive_accident_signal(request):
+    """
+    Process an accident/impact signal from the mobile app.
+
+    POST /alerts/api/accident-signal/
+    Headers: Authorization: Token <token>
+    Body: {impact_level, speed_before, speed_after, no_movement_seconds, phone_angle_changed, user_confirmed, location}
+    """
+    input_serializer = AccidentSignalInputSerializer(data=request.data)
+    if not input_serializer.is_valid():
+        return Response(
+            {'error': {'code': 'validation_error', 'details': input_serializer.errors}},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    data = input_serializer.validated_data
+    user = request.user
+
+    # Resolve speed values (support both naming conventions)
+    status_value = data.get('status', '')
+    speed_before = data.get('speed_before') if data.get('speed_before') is not None else data.get('speed', 0)
+    speed_after = data.get('speed_after') if data.get('speed_after') is not None else data.get('speed', 0)
+    impact_level = data.get('impact_level') or data.get('impact_g', 0)
+    user_confirmed = data.get('user_confirmed') or status_value in {'confirmed_no_response', 'manual_sos'}
+
+    decision = calculate_accident_risk(
+        impact_level=impact_level,
+        speed_before=speed_before,
+        speed_after=speed_after,
+        no_movement_seconds=data.get('no_movement_seconds', 0),
+        phone_angle_changed=data.get('phone_angle_changed', False),
+        user_confirmed=user_confirmed,
+    )
+
+    # Build location string
+    location = data.get('location', '')
+    if not location and data.get('latitude') is not None and data.get('longitude') is not None:
+        location = f"{data['latitude']},{data['longitude']}"
+    if not location:
+        location = 'Mobile GPS location not provided'
+
+    is_confirmed = decision['severity'] == 'confirmed'
+    alert = EmergencyAlert.objects.create(
+        user=user,
+        location=location,
+        severity=decision['severity'],
+        source='impact',
+        message=decision['message'],
+        alert_sent=decision['guardian_alert_sent'],
+        parent_call_requested=decision['parent_call_requested'],
+        ambulance_requested=is_confirmed,
+        notes=(
+            f"risk_score={decision['score']}; speed_drop={decision['speed_drop']}; "
+            f"reasons={' | '.join(decision['reasons'])}; impact_level={impact_level}, "
+            f"speed_before={speed_before}, speed_after={speed_after}, "
+            f"no_movement_seconds={data.get('no_movement_seconds', 0)}, "
+            f"phone_angle_changed={data.get('phone_angle_changed', False)}"
+        ),
+    )
+
+    EscalationEvent.objects.create(alert=alert, stage='suspicion', message='Accident signal received from mobile app.')
+    if alert.alert_sent:
+        EscalationEvent.objects.create(alert=alert, stage='guardian_notified', message='Guardian notified after accident signal.')
+    if is_confirmed:
+        EscalationEvent.objects.create(alert=alert, stage='rider_confirmed', message='Confirmed accident from mobile workflow.')
+        EscalationEvent.objects.create(alert=alert, stage='ambulance_requested', message='Ambulance workflow requested after confirmed mobile event.')
+
+    notification_logs = []
+    if alert.alert_sent or alert.parent_call_requested or alert.ambulance_requested:
+        notification_logs = notify_guardian(alert, request_call=alert.parent_call_requested, request_ambulance=alert.ambulance_requested)
+
+    logger.warning(
+        'Accident signal user=%s severity=%s score=%d location=%s',
+        user.username, decision['severity'], decision['score'], location,
+    )
+
+    return Response({
+        'message': 'Accident signal processed.',
+        'risk_score': decision['score'],
+        'severity': decision['severity'],
+        'reasons': decision['reasons'],
+        'guardian_alert_sent': alert.alert_sent,
+        'parent_call_requested': alert.parent_call_requested,
+        'ambulance_requested': alert.ambulance_requested,
+        'notification_logs_created': len(notification_logs),
+        'alert': EmergencyAlertSerializer(alert).data,
+    }, status=status.HTTP_201_CREATED)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def register_device(request):
+    """
+    Register a device for push notifications.
+
+    POST /alerts/api/register-device/
+    Headers: Authorization: Token <token>
+    Body: {token, platform}
+    """
+    input_serializer = DeviceRegistrationInputSerializer(data=request.data)
+    if not input_serializer.is_valid():
+        return Response(
+            {'error': {'code': 'validation_error', 'details': input_serializer.errors}},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    data = input_serializer.validated_data
+    device, created = DeviceRegistration.objects.update_or_create(
+        token=data['token'],
+        defaults={
+            'user': request.user,
+            'platform': data['platform'],
+            'is_active': True,
+        },
+    )
+
+    logger.info('Device registered user=%s platform=%s new=%s', request.user.username, data['platform'], created)
+    return Response(DeviceRegistrationSerializer(device).data, status=status.HTTP_201_CREATED)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def test_notification_api(request):
+    """
+    Send a test notification (development/QA only).
+
+    POST /alerts/api/test-notification/
+    Headers: Authorization: Token <token>
+    Body: {location, message, request_call}
+    """
+    input_serializer = TestNotificationInputSerializer(data=request.data)
+    if not input_serializer.is_valid():
+        return Response(
+            {'error': {'code': 'validation_error', 'details': input_serializer.errors}},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    data = input_serializer.validated_data
+    alert = EmergencyAlert.objects.create(
+        user=request.user,
+        location=data['location'],
+        severity='medium',
+        source='demo',
+        message=data['message'],
+        alert_sent=True,
+        parent_call_requested=data['request_call'],
+    )
+    logs = notify_guardian(alert, request_call=data['request_call'])
+
+    logger.info('Test notification sent user=%s logs=%d', request.user.username, len(logs))
+    return Response({
+        'message': 'Test notification sent.',
+        'logs_created': len(logs),
+        'recipients': [log.recipient for log in logs],
+    }, status=status.HTTP_201_CREATED)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def api_alert_history(request):
+    """
+    Get the authenticated user's alert history.
+
+    GET /alerts/api/history/
+    Headers: Authorization: Token <token>
+    """
+    alerts = EmergencyAlert.objects.filter(user=request.user).order_by('-created_at')[:20]
+    return Response({
+        'username': request.user.username,
+        'alerts': EmergencyAlertSerializer(alerts, many=True).data,
+    })

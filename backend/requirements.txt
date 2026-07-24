@@ -1,3 +1,62 @@
-Django>=5.0,<7.0
-djangorestframework>=3.15
-firebase-admin>=6.6
+# =============================================================================
+# SafeRide Guardian - Production Dependencies
+# =============================================================================
+# Install: pip install -r requirements.txt
+# Update:  pip install --upgrade -r requirements.txt
+# =============================================================================
+
+# ---------------------------------------------------------------------------
+# Core Framework
+# ---------------------------------------------------------------------------
+Django==5.1.4
+djangorestframework==3.15.2
+
+# ---------------------------------------------------------------------------
+# Database
+# ---------------------------------------------------------------------------
+psycopg2-binary==2.9.9          # PostgreSQL adapter (use psycopg2 for production builds)
+dj-database-url==2.3.0          # Database URL parsing for 12-factor apps
+
+# ---------------------------------------------------------------------------
+# Authentication & Security
+# ---------------------------------------------------------------------------
+django-cors-headers==4.6.0      # CORS headers for mobile/SPA clients
+PyJWT==2.9.0                    # JWT utilities (future upgrade path)
+
+# ---------------------------------------------------------------------------
+# Production Server
+# ---------------------------------------------------------------------------
+gunicorn==23.0.0                # WSGI HTTP server for production
+whitenoise==6.8.2               # Serve static files without nginx in simple deployments
+uvicorn[standard]==0.34.0       # ASGI server for WebSocket support (future)
+
+# ---------------------------------------------------------------------------
+# Push Notifications & External Services
+# ---------------------------------------------------------------------------
+firebase-admin==6.6.0           # Firebase Cloud Messaging for push notifications
+requests==2.32.3                # HTTP client for webhook integrations
+twilio==9.4.1                   # SMS/Voice notifications (optional)
+
+# ---------------------------------------------------------------------------
+# Monitoring & Observability
+# ---------------------------------------------------------------------------
+sentry-sdk[django]==2.19.2      # Error tracking and performance monitoring
+django-health-check==3.18.3     # Health check endpoints for load balancers
+
+# ---------------------------------------------------------------------------
+# Environment & Configuration
+# ---------------------------------------------------------------------------
+python-dotenv==1.0.1            # Load .env files for local development
+django-environ==0.11.2          # Type-casting environment variables
+
+# ---------------------------------------------------------------------------
+# Task Queue (for async notification delivery)
+# ---------------------------------------------------------------------------
+celery[redis]==5.4.0            # Distributed task queue
+redis==5.2.1                    # Redis client (cache + Celery broker)
+
+# ---------------------------------------------------------------------------
+# Utilities
+# ---------------------------------------------------------------------------
+django-filter==24.3             # Queryset filtering for DRF
+django-extensions==3.2.3        # Management command utilities (dev)
