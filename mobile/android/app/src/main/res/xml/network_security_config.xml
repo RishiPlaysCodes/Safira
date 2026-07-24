@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Network Security Configuration for SafeRide Guardian
+  
+  Production:
+  - Enforces HTTPS for all connections
+  - Only allows cleartext (HTTP) for local development IPs
+  
+  Certificate Pinning:
+  - Uncomment the <pin-set> block below and add your server's certificate pins
+  - Generate pins with: openssl s_client -connect yourdomain.com:443 | openssl x509 -pubkey -noout | openssl pkey -pubin -outform der | openssl dgst -sha256 -binary | openssl enc -base64
+-->
+<network-security-config>
+    <!-- Default: require HTTPS for all connections -->
+    <base-config cleartextTrafficPermitted="false">
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
+
+    <!-- Allow cleartext only for local development -->
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="false">localhost</domain>
+        <domain includeSubdomains="false">127.0.0.1</domain>
+        <domain includeSubdomains="false">10.0.2.2</domain>
+    </domain-config>
+
+    <!--
+    PRODUCTION: Uncomment and configure certificate pinning for your domain.
+    Replace the pin digests with your actual certificate's public key pins.
+    Always include a backup pin from a different CA.
+    
+    <domain-config>
+        <domain includeSubdomains="true">api.yourdomain.com</domain>
+        <pin-set expiration="2026-01-01">
+            <pin digest="SHA-256">AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=</pin>
+            <pin digest="SHA-256">BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB=</pin>
+        </pin-set>
+    </domain-config>
+    -->
+</network-security-config>

@@ -1,0 +1,50 @@
+# Git
+.git
+.gitignore
+
+# Python
+__pycache__
+*.pyc
+*.pyo
+*.egg-info
+.eggs
+dist
+build
+.venv
+venv
+env
+
+# IDE
+.idea
+.vscode
+*.swp
+*.swo
+
+# Development files
+*.md
+!README.md
+requirements-dev.txt
+.coverage
+htmlcov
+.pytest_cache
+.mypy_cache
+.ruff_cache
+
+# Environment files (use Docker secrets or env vars instead)
+.env
+.env.*
+!.env.example
+
+# Database
+db.sqlite3
+*.sqlite3
+
+# Logs (created at runtime)
+logs/
+
+# Static files (collected during build)
+staticfiles/
+
+# OS files
+.DS_Store
+Thumbs.db
