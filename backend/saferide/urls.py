@@ -1,25 +1,30 @@
 """
 URL configuration for saferide project.
 
-The `urlpatterns` list routes URLs to views. For more information please see:
-    https://docs.djangoproject.com/en/6.0/topics/http/urls/
-Examples:
-Function views
-    1. Add an import:  from my_app import views
-    2. Add a URL to urlpatterns:  path('', views.home, name='home')
-Class-based views
-    1. Add an import:  from other_app.views import Home
-    2. Add a URL to urlpatterns:  path('', Home.as_view(), name='home')
-Including another URLconf
-    1. Import the include() function: from django.urls import include, path
-    2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
+API Endpoints Summary:
+  - /api/auth/          : Authentication (login, signup, logout, profile)
+  - /api/health/        : Health checks (liveness, readiness, detail)
+  - /trips/api/         : Trip data, history, zones, vision
+  - /alerts/api/        : Accident signals, device registration, notifications
+  - /admin/             : Django admin interface
 """
+
 from django.contrib import admin
-from django.urls import path,include
+from django.urls import include, path
+
+from .health import health_detail, health_liveness, health_readiness
 
 urlpatterns = [
+    # Admin
     path('admin/', admin.site.urls),
-    path('',include('users.urls')),
+
+    # Health checks (must be accessible without auth)
+    path('api/health/', health_liveness, name='health_liveness'),
+    path('api/health/ready/', health_readiness, name='health_readiness'),
+    path('api/health/detail/', health_detail, name='health_detail'),
+
+    # App URLs
+    path('', include('users.urls')),
     path('trips/', include('trips.urls')),
     path('alerts/', include('alerts.urls')),
 ]

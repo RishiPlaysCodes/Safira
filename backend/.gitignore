@@ -1,9 +1,50 @@
+# =============================================================================
+# SafeRide Guardian Backend - Git Ignore
+# =============================================================================
+
+# Environment & Secrets
+.env
+.env.*
+!.env.example
+
+# Python
 venv/
+.venv/
 __pycache__/
 *.pyc
 *.pyo
 *.pyd
+*.egg-info/
+dist/
+build/
+
+# Database
 *.sqlite3
-.env
-.DS_Store
+db.sqlite3
+
+# Static files (collected)
+staticfiles/
+
+# Logs
+logs/
+*.log
+
+# IDE
 .vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Testing
+.coverage
+htmlcov/
+.pytest_cache/
+.mypy_cache/
+
+# Firebase credentials (NEVER commit)
+*firebase*.json
+*service-account*.json

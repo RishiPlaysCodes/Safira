@@ -1,0 +1,31 @@
+# =============================================================================
+# SafeRide Guardian - Development Dependencies
+# =============================================================================
+# Install: pip install -r requirements-dev.txt
+# =============================================================================
+
+-r requirements.txt
+
+# ---------------------------------------------------------------------------
+# Testing
+# ---------------------------------------------------------------------------
+pytest==8.3.4
+pytest-django==4.9.0
+pytest-cov==6.0.0
+factory-boy==3.3.1              # Test data factories
+faker==33.1.0                   # Fake data generation
+
+# ---------------------------------------------------------------------------
+# Code Quality
+# ---------------------------------------------------------------------------
+ruff==0.8.4                     # Fast linter + formatter (replaces flake8, black, isort)
+mypy==1.13.0                    # Static type checking
+django-stubs==5.1.1             # Type stubs for Django
+djangorestframework-stubs==3.15.1
+
+# ---------------------------------------------------------------------------
+# Development Tools
+# ---------------------------------------------------------------------------
+django-debug-toolbar==4.4.6     # SQL/performance debugging
+ipython==8.30.0                 # Enhanced interactive shell
+pre-commit==4.0.1               # Git hook management
