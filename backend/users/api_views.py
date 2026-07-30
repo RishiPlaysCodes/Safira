@@ -23,8 +23,12 @@ logger = logging.getLogger('saferide')
 # ---------------------------------------------------------------------------
 
 class AuthRateThrottle(AnonRateThrottle):
-    """Stricter throttle for auth endpoints to prevent brute force."""
-    rate = '5/minute'
+    """Stricter throttle for auth endpoints to prevent brute force.
+
+    Uses its own 'auth' scope (rate configured in settings) so it does not
+    share a counter with the global anonymous throttle.
+    """
+    scope = 'auth'
 
 
 # ---------------------------------------------------------------------------

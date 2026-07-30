@@ -222,6 +222,7 @@ REST_FRAMEWORK = {
         'anon': os.environ.get('THROTTLE_ANON', '20/minute'),
         'user': os.environ.get('THROTTLE_USER', '120/minute'),
         'accident_signal': os.environ.get('THROTTLE_ACCIDENT', '10/minute'),
+        'auth': os.environ.get('THROTTLE_AUTH', '5/minute'),
     },
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
     'PAGE_SIZE': 20,
@@ -264,6 +265,14 @@ TRAFFIC_PROVIDER = os.environ.get('TRAFFIC_PROVIDER', 'free_manual')
 
 LOG_LEVEL = os.environ.get('LOG_LEVEL', 'INFO')
 
+# On serverless platforms (Cloud Run, App Engine, Heroku) logs should go to
+# stdout/stderr and be collected by the platform. File logging is opt-in via
+# LOG_TO_FILE=true and is intended for VM/bare-metal or local development.
+LOG_TO_FILE = os.environ.get('LOG_TO_FILE', 'False').lower() in ('true', '1', 'yes')
+
+_app_handlers = ['console']
+_security_handlers = ['console']
+
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
@@ -272,67 +281,62 @@ LOGGING = {
             'format': '{asctime} [{levelname}] {name} {module}.{funcName}:{lineno} - {message}',
             'style': '{',
         },
-        'json': {
-            'format': '{asctime} {levelname} {name} {message}',
-            'style': '{',
-        },
-    },
-    'filters': {
-        'require_debug_false': {
-            '()': 'django.utils.log.RequireDebugFalse',
-        },
     },
     'handlers': {
         'console': {
             'class': 'logging.StreamHandler',
             'formatter': 'verbose',
         },
-        'file': {
-            'class': 'logging.handlers.RotatingFileHandler',
-            'filename': BASE_DIR / 'logs' / 'saferide.log',
-            'maxBytes': 10 * 1024 * 1024,  # 10 MB
-            'backupCount': 5,
-            'formatter': 'verbose',
-        },
-        'security': {
-            'class': 'logging.handlers.RotatingFileHandler',
-            'filename': BASE_DIR / 'logs' / 'security.log',
-            'maxBytes': 10 * 1024 * 1024,
-            'backupCount': 10,
-            'formatter': 'verbose',
-        },
     },
     'loggers': {
         'django': {
-            'handlers': ['console', 'file'],
+            'handlers': _app_handlers,
             'level': LOG_LEVEL,
-            'propagate': True,
+            'propagate': False,
         },
         'django.security': {
-            'handlers': ['console', 'security'],
+            'handlers': _security_handlers,
             'level': 'WARNING',
             'propagate': False,
         },
         'saferide': {
-            'handlers': ['console', 'file'],
+            'handlers': _app_handlers,
             'level': LOG_LEVEL,
             'propagate': False,
         },
         'alerts': {
-            'handlers': ['console', 'file'],
+            'handlers': _app_handlers,
             'level': LOG_LEVEL,
             'propagate': False,
         },
         'trips': {
-            'handlers': ['console', 'file'],
+            'handlers': _app_handlers,
             'level': LOG_LEVEL,
             'propagate': False,
         },
     },
 }
 
-# Ensure log directory exists
-(BASE_DIR / 'logs').mkdir(exist_ok=True)
+if LOG_TO_FILE:
+    log_dir = BASE_DIR / 'logs'
+    log_dir.mkdir(exist_ok=True)
+    LOGGING['handlers']['file'] = {
+        'class': 'logging.handlers.RotatingFileHandler',
+        'filename': log_dir / 'saferide.log',
+        'maxBytes': 10 * 1024 * 1024,  # 10 MB
+        'backupCount': 5,
+        'formatter': 'verbose',
+    }
+    LOGGING['handlers']['security'] = {
+        'class': 'logging.handlers.RotatingFileHandler',
+        'filename': log_dir / 'security.log',
+        'maxBytes': 10 * 1024 * 1024,
+        'backupCount': 10,
+        'formatter': 'verbose',
+    }
+    for _logger in ('django', 'saferide', 'alerts', 'trips'):
+        LOGGING['loggers'][_logger]['handlers'].append('file')
+    LOGGING['loggers']['django.security']['handlers'].append('security')
 
 
 # ---------------------------------------------------------------------------
