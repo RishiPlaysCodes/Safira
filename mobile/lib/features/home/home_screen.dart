@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../services/api_client.dart';
 import '../../services/auth_service.dart';
+import '../camera/camera_screen.dart';
 import '../map/map_screen.dart';
 import 'home_controller.dart';
 
@@ -161,6 +162,17 @@ class _HomeScreenState extends State<HomeScreen> {
                 onHelmetMissing: controller.reportHelmetMissing,
                 onRedLight: controller.reportRedLightViolation,
                 onHeavyTraffic: controller.reportHeavyTraffic,
+                onOpenHelmetCamera: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => CameraScreen(
+                        onHelmetViolation: () {
+                          controller.reportHelmetMissing();
+                        },
+                      ),
+                    ),
+                  );
+                },
               ),
               const SizedBox(height: 14),
               _SettingsCard(
@@ -562,11 +574,13 @@ class _RideAnalysisCard extends StatelessWidget {
     required this.onHelmetMissing,
     required this.onRedLight,
     required this.onHeavyTraffic,
+    required this.onOpenHelmetCamera,
   });
 
   final VoidCallback onHelmetMissing;
   final VoidCallback onRedLight;
   final VoidCallback onHeavyTraffic;
+  final VoidCallback onOpenHelmetCamera;
 
   @override
   Widget build(BuildContext context) {
@@ -582,7 +596,19 @@ class _RideAnalysisCard extends StatelessWidget {
             ),
             const SizedBox(height: 6),
             const Text(
-                'AI-ready ride events. These buttons test the full safety pipeline until a real camera model is connected.'),
+                'AI-powered safety checks. Use the camera for live helmet detection or test the pipeline with buttons.'),
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton.icon(
+                onPressed: onOpenHelmetCamera,
+                icon: const Icon(Icons.camera_alt),
+                label: const Text('Live Helmet Detection'),
+                style: FilledButton.styleFrom(
+                  backgroundColor: const Color(0xFF146C94),
+                ),
+              ),
+            ),
             const SizedBox(height: 12),
             Wrap(
               spacing: 10,
