@@ -1,66 +1,86 @@
-import 'dart:convert';
-
-import 'package:http/http.dart' as http;
-
 import '../models/accident_event.dart';
+import '../services/api_client.dart';
 import '../services/offline_queue_service.dart';
 
+/// Repository for sending accident/emergency alerts to the backend.
+/// Uses token-based authentication and queues failed requests for retry.
 class AlertRepository {
-  AlertRepository({OfflineQueueService? queueService})
-      : _queueService = queueService ?? OfflineQueueService();
+  AlertRepository({
+    required this.apiClient,
+    OfflineQueueService? queueService,
+  }) : _queueService = queueService ?? OfflineQueueService();
 
+  final ApiClient apiClient;
   final OfflineQueueService _queueService;
 
-  Future<void> sendEvent({
+  /// Send an accident event to the backend.
+  /// Queues the payload locally if the request fails (offline support).
+  Future<ApiResult> sendEvent({
     required String backendUrl,
-    required String username,
     required AccidentEvent event,
   }) async {
-    if (backendUrl.isEmpty) return;
+    if (backendUrl.isEmpty) {
+      return ApiResult.error('Backend URL not configured.');
+    }
 
-    final uri = Uri.tryParse('$backendUrl/alerts/api/accident-signal/');
-    if (uri == null) return;
+    final payload = event.toJson();
+    final result = await apiClient.postQuick(
+      backendUrl,
+      '/alerts/api/accident-signal/',
+      payload,
+    );
 
-    final payload = {
-      'username': username,
-      ...event.toJson(),
-    };
-
-    try {
-      await http
-          .post(
-            uri,
-            headers: {'Content-Type': 'application/json'},
-            body: jsonEncode(payload),
-          )
-          .timeout(const Duration(seconds: 3));
-    } catch (_) {
+    if (!result.success) {
+      // Queue for later sync if network failed
       await _queueService.addAlert(payload);
     }
+
+    return result;
   }
 
-  Future<void> syncPending({required String backendUrl}) async {
-    if (backendUrl.isEmpty) return;
-    final uri = Uri.tryParse('$backendUrl/alerts/api/accident-signal/');
-    if (uri == null) return;
+  /// Retry sending queued alerts that failed previously.
+  Future<int> syncPending({required String backendUrl}) async {
+    if (backendUrl.isEmpty) return 0;
 
     final pending = await _queueService.loadAlerts();
+    if (pending.isEmpty) return 0;
+
     final remaining = <Map<String, dynamic>>[];
+    int synced = 0;
 
     for (final payload in pending) {
-      try {
-        await http
-            .post(
-              uri,
-              headers: {'Content-Type': 'application/json'},
-              body: jsonEncode(payload),
-            )
-            .timeout(const Duration(seconds: 3));
-      } catch (_) {
+      final result = await apiClient.postQuick(
+        backendUrl,
+        '/alerts/api/accident-signal/',
+        payload,
+      );
+
+      if (result.success) {
+        synced++;
+      } else {
         remaining.add(payload);
       }
     }
 
     await _queueService.replaceAlerts(remaining);
+    return synced;
+  }
+
+  /// Register device for push notifications.
+  Future<ApiResult> registerDevice({
+    required String backendUrl,
+    required String fcmToken,
+    String platform = 'android',
+  }) async {
+    return apiClient.post(
+      backendUrl,
+      '/alerts/api/register-device/',
+      {'token': fcmToken, 'platform': platform},
+    );
+  }
+
+  /// Get alert history for the authenticated user.
+  Future<ApiResult> getAlertHistory({required String backendUrl}) async {
+    return apiClient.get(backendUrl, '/alerts/api/history/');
   }
 }

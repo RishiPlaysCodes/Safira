@@ -1,10 +1,20 @@
 import 'package:flutter/material.dart';
 
+import '../../services/api_client.dart';
+import '../../services/auth_service.dart';
+import '../camera/camera_screen.dart';
 import '../map/map_screen.dart';
 import 'home_controller.dart';
 
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({super.key});
+  const HomeScreen({
+    super.key,
+    required this.authService,
+    required this.apiClient,
+  });
+
+  final AuthService authService;
+  final ApiClient apiClient;
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -14,16 +24,17 @@ class _HomeScreenState extends State<HomeScreen> {
   late final HomeController controller;
   late final TextEditingController parentPhoneController;
   late final TextEditingController backendUrlController;
-  late final TextEditingController usernameController;
   late final TextEditingController destinationController;
 
   @override
   void initState() {
     super.initState();
-    controller = HomeController()..addListener(_refresh);
+    controller = HomeController(
+      authService: widget.authService,
+      apiClient: widget.apiClient,
+    )..addListener(_refresh);
     parentPhoneController = TextEditingController();
     backendUrlController = TextEditingController();
-    usernameController = TextEditingController();
     destinationController = TextEditingController();
     _load();
   }
@@ -32,8 +43,13 @@ class _HomeScreenState extends State<HomeScreen> {
     await controller.loadSettings();
     parentPhoneController.text = controller.parentPhone;
     backendUrlController.text = controller.backendUrl;
-    usernameController.text = controller.username;
     destinationController.text = controller.destination;
+    // Register this device for push notifications now that we're authenticated.
+    await controller.saveSettings(
+      newParentPhone: controller.parentPhone,
+      newBackendUrl: controller.backendUrl,
+      newDestination: controller.destination,
+    );
   }
 
   void _refresh() {
@@ -46,7 +62,6 @@ class _HomeScreenState extends State<HomeScreen> {
     controller.dispose();
     parentPhoneController.dispose();
     backendUrlController.dispose();
-    usernameController.dispose();
     destinationController.dispose();
     super.dispose();
   }
@@ -65,6 +80,7 @@ class _HomeScreenState extends State<HomeScreen> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               _Header(
+                username: controller.username,
                 tracking: controller.tracking,
                 guardianReady: guardianReady,
                 onMapTap: () {
@@ -77,6 +93,9 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                     ),
                   );
+                },
+                onLogout: () async {
+                  await controller.logout();
                 },
               ),
               const SizedBox(height: 16),
@@ -143,20 +162,29 @@ class _HomeScreenState extends State<HomeScreen> {
                 onHelmetMissing: controller.reportHelmetMissing,
                 onRedLight: controller.reportRedLightViolation,
                 onHeavyTraffic: controller.reportHeavyTraffic,
+                onOpenHelmetCamera: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => CameraScreen(
+                        onHelmetViolation: () {
+                          controller.reportHelmetMissing();
+                        },
+                      ),
+                    ),
+                  );
+                },
               ),
               const SizedBox(height: 14),
               _SettingsCard(
                 parentPhoneController: parentPhoneController,
                 backendUrlController: backendUrlController,
-                usernameController: usernameController,
                 destinationController: destinationController,
                 onSave: () async {
                   final messenger = ScaffoldMessenger.of(context);
                   await controller.saveSettings(
                     newParentPhone: parentPhoneController.text,
                     newBackendUrl: backendUrlController.text,
-                  newUsername: usernameController.text,
-                  newDestination: destinationController.text,
+                    newDestination: destinationController.text,
                   );
                   if (!mounted) return;
                   messenger.showSnackBar(
@@ -174,14 +202,18 @@ class _HomeScreenState extends State<HomeScreen> {
 
 class _Header extends StatelessWidget {
   const _Header({
+    required this.username,
     required this.tracking,
     required this.guardianReady,
     required this.onMapTap,
+    required this.onLogout,
   });
 
+  final String username;
   final bool tracking;
   final bool guardianReady;
   final VoidCallback onMapTap;
+  final Future<void> Function() onLogout;
 
   @override
   Widget build(BuildContext context) {
@@ -197,6 +229,11 @@ class _Header extends StatelessWidget {
                       fontWeight: FontWeight.bold,
                     ),
               ),
+              if (username.isNotEmpty)
+                Text(
+                  'Hi, $username',
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
               const SizedBox(height: 4),
               Wrap(
                 spacing: 8,
@@ -207,7 +244,8 @@ class _Header extends StatelessWidget {
                     color: tracking ? Colors.green : Colors.grey,
                   ),
                   _StatusChip(
-                    label: guardianReady ? 'Guardian ready' : 'Guardian missing',
+                    label:
+                        guardianReady ? 'Guardian ready' : 'Guardian missing',
                     color: guardianReady ? Colors.blue : Colors.orange,
                   ),
                 ],
@@ -218,6 +256,33 @@ class _Header extends StatelessWidget {
         IconButton.filledTonal(
           onPressed: onMapTap,
           icon: const Icon(Icons.map_outlined),
+        ),
+        const SizedBox(width: 8),
+        IconButton(
+          tooltip: 'Logout',
+          onPressed: () async {
+            final confirmed = await showDialog<bool>(
+              context: context,
+              builder: (ctx) => AlertDialog(
+                title: const Text('Logout'),
+                content: const Text('Are you sure you want to logout?'),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.of(ctx).pop(false),
+                    child: const Text('Cancel'),
+                  ),
+                  FilledButton(
+                    onPressed: () => Navigator.of(ctx).pop(true),
+                    child: const Text('Logout'),
+                  ),
+                ],
+              ),
+            );
+            if (confirmed == true) {
+              await onLogout();
+            }
+          },
+          icon: const Icon(Icons.logout),
         ),
       ],
     );
@@ -299,7 +364,9 @@ class _SpeedHero extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           Text(
-            overspeed ? 'Overspeed warning — slow down' : 'Speed is within safe range',
+            overspeed
+                ? 'Overspeed warning — slow down'
+                : 'Speed is within safe range',
             style: TextStyle(
               color: overspeed ? Colors.red.shade700 : Colors.green.shade700,
               fontWeight: FontWeight.w600,
@@ -374,7 +441,9 @@ class _ActionRow extends StatelessWidget {
         Expanded(
           child: FilledButton.tonalIcon(
             onPressed: onTrackingTap,
-            icon: Icon(tracking ? Icons.stop_circle_outlined : Icons.play_circle_outline),
+            icon: Icon(tracking
+                ? Icons.stop_circle_outlined
+                : Icons.play_circle_outline),
             label: Text(tracking ? 'Stop Tracking' : 'Start Tracking'),
           ),
         ),
@@ -451,14 +520,12 @@ class _SettingsCard extends StatelessWidget {
   const _SettingsCard({
     required this.parentPhoneController,
     required this.backendUrlController,
-    required this.usernameController,
     required this.destinationController,
     required this.onSave,
   });
 
   final TextEditingController parentPhoneController;
   final TextEditingController backendUrlController;
-  final TextEditingController usernameController;
   final TextEditingController destinationController;
   final VoidCallback onSave;
 
@@ -472,16 +539,13 @@ class _SettingsCard extends StatelessWidget {
           'Emergency Settings',
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
-        subtitle: const Text('Guardian, account, and backend connection'),
+        subtitle: const Text('Guardian and backend connection'),
         children: [
           TextField(
             controller: parentPhoneController,
-            decoration: const InputDecoration(labelText: 'Parent/Guardian phone'),
+            decoration:
+                const InputDecoration(labelText: 'Parent/Guardian phone'),
             keyboardType: TextInputType.phone,
-          ),
-          TextField(
-            controller: usernameController,
-            decoration: const InputDecoration(labelText: 'Username'),
           ),
           TextField(
             controller: destinationController,
@@ -510,11 +574,13 @@ class _RideAnalysisCard extends StatelessWidget {
     required this.onHelmetMissing,
     required this.onRedLight,
     required this.onHeavyTraffic,
+    required this.onOpenHelmetCamera,
   });
 
   final VoidCallback onHelmetMissing;
   final VoidCallback onRedLight;
   final VoidCallback onHeavyTraffic;
+  final VoidCallback onOpenHelmetCamera;
 
   @override
   Widget build(BuildContext context) {
@@ -529,7 +595,20 @@ class _RideAnalysisCard extends StatelessWidget {
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 6),
-            const Text('AI-ready ride events. These buttons test the full safety pipeline until a real camera model is connected.'),
+            const Text(
+                'AI-powered safety checks. Use the camera for live helmet detection or test the pipeline with buttons.'),
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton.icon(
+                onPressed: onOpenHelmetCamera,
+                icon: const Icon(Icons.camera_alt),
+                label: const Text('Live Helmet Detection'),
+                style: FilledButton.styleFrom(
+                  backgroundColor: const Color(0xFF146C94),
+                ),
+              ),
+            ),
             const SizedBox(height: 12),
             Wrap(
               spacing: 10,
@@ -558,4 +637,3 @@ class _RideAnalysisCard extends StatelessWidget {
     );
   }
 }
-

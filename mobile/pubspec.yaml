@@ -10,17 +10,31 @@ dependencies:
   flutter:
     sdk: flutter
   cupertino_icons: ^1.0.8
+
+  # Location & Sensors
   geolocator: ^13.0.2
   sensors_plus: ^6.1.1
   permission_handler: ^11.3.1
+
+  # Networking & Storage
   url_launcher: ^6.3.1
   http: ^1.2.2
   shared_preferences: ^2.3.2
+
+  # Maps
   flutter_map: ^8.2.2
   latlong2: ^0.9.1
+
+  # Firebase (optional - app works without google-services.json)
   firebase_core: ^3.10.0
   firebase_messaging: ^15.2.0
+
+  # Notifications
   flutter_local_notifications: ^19.4.2
+
+  # Camera & AI (helmet detection)
+  camera: ^0.11.1
+  tflite_flutter: ^0.11.0
 
 dev_dependencies:
   flutter_test:
@@ -30,3 +44,5 @@ dev_dependencies:
 flutter:
   uses-material-design: true
 
+  assets:
+    - assets/models/

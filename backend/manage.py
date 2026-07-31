@@ -2,11 +2,22 @@
 """Django's command-line utility for administrative tasks."""
 import os
 import sys
+from pathlib import Path
 
 
 def main():
     """Run administrative tasks."""
     os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'saferide.settings')
+
+    # Load .env file for local development (only if it exists)
+    env_file = Path(__file__).resolve().parent / '.env'
+    if env_file.exists():
+        try:
+            from dotenv import load_dotenv
+            load_dotenv(env_file)
+        except ImportError:
+            pass  # python-dotenv not installed, env vars must be set manually
+
     try:
         from django.core.management import execute_from_command_line
     except ImportError as exc:
